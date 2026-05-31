@@ -83,6 +83,16 @@
             color: #6600CC !important;
         }
 
+        /* Signup form additional fields */
+        .signup-fields {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .signup-fields.show {
+            max-height: 300px;
+        }
+
         #mainApp {
             display: none;
             flex-direction: column;
@@ -447,8 +457,14 @@
     <h1>FRAMOR</h1>
     <p>Connect differently ✨</p>
     <div id="loginForm">
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password">
+        <!-- Signup Fields (hidden initially, shown when Create Account is clicked) -->
+        <div id="signupFields" class="signup-fields">
+            <input type="text" id="firstName" placeholder="First Name *">
+            <input type="text" id="lastName" placeholder="Last Name *">
+            <input type="date" id="dob" placeholder="Date of Birth">
+        </div>
+        <input type="email" id="email" placeholder="Email *">
+        <input type="password" id="password" placeholder="Password *">
         <button id="signupBtn">Create Account</button>
         <button id="loginBtn">Sign In</button>
         <button id="googleBtn">🚀 Sign in with Google</button>
@@ -505,9 +521,11 @@
         <div id="profileEdit" style="display:none;">
             <div class="profile-card">
                 <h3>Edit Profile</h3>
-                <input type="text" id="editDisplayName" class="profile-input" placeholder="Display Name">
-                <textarea id="editBio" class="profile-input" rows="3" placeholder="Bio"></textarea>
+                <input type="text" id="editFirstName" class="profile-input" placeholder="First Name">
+                <input type="text" id="editLastName" class="profile-input" placeholder="Last Name">
+                <input type="date" id="editDob" class="profile-input" placeholder="Date of Birth">
                 <input type="text" id="editLocation" class="profile-input" placeholder="Location">
+                <input type="text" id="editBio" class="profile-input" rows="3" placeholder="Bio">
                 <input type="text" id="editWebsite" class="profile-input" placeholder="Website">
                 <button id="saveProfileBtn" class="edit-profile-btn">💾 Save Changes</button>
                 <button id="cancelEditBtn" class="logout-btn" style="margin-top: 8px;">Cancel</button>
@@ -545,6 +563,19 @@
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         const loginMessage = document.getElementById('loginMessage');
+        const signupFields = document.getElementById('signupFields');
+        let isSignupMode = false;
+        
+        // Toggle signup fields
+        document.getElementById('signupBtn').addEventListener('click', () => {
+            isSignupMode = true;
+            signupFields.classList.add('show');
+        });
+        
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            isSignupMode = false;
+            signupFields.classList.remove('show');
+        });
         
         // Helper function to show messages
         function showMessage(element, text, type) {
@@ -568,6 +599,17 @@
             });
         }
         
+        // Get user's full name for display
+        function getUserDisplayName(profile, email) {
+            if (profile?.first_name && profile?.last_name) {
+                return `${profile.first_name} ${profile.last_name}`;
+            }
+            if (profile?.display_name) {
+                return profile.display_name;
+            }
+            return email.split('@')[0];
+        }
+        
         // ============ PROFILE FUNCTIONS ============
         async function loadProfile() {
             if (!currentUser) return;
@@ -585,7 +627,8 @@
                     .from('user_profiles')
                     .insert({
                         id: currentUser.id,
-                        display_name: currentUser.email.split('@')[0]
+                        display_name: currentUser.email.split('@')[0],
+                        email: currentUser.email
                     })
                     .select()
                     .single();
@@ -610,17 +653,21 @@
             const friendsCount = friendships?.length || 0;
             
             // Display profile
-            const displayName = profile?.display_name || currentUser.email.split('@')[0];
+            const fullName = getUserDisplayName(profile, currentUser.email);
+            const firstName = profile?.first_name || '';
+            const lastName = profile?.last_name || '';
             const bio = profile?.bio || 'No bio yet';
             const location = profile?.location || 'No location set';
             const website = profile?.website || 'No website';
+            const dob = profile?.date_of_birth || 'Not set';
             
             document.getElementById('profileDisplay').innerHTML = `
                 <div class="profile-info">
-                    <h3>${escapeHtml(displayName)}</h3>
+                    <h3>${escapeHtml(fullName)}</h3>
                     <p>📧 ${escapeHtml(currentUser.email)}</p>
                     <p>📝 ${escapeHtml(bio)}</p>
                     <p>📍 ${escapeHtml(location)}</p>
+                    <p>🎂 ${escapeHtml(dob)}</p>
                     <p>🔗 ${escapeHtml(website)}</p>
                     <div class="profile-stats">
                         <div class="stat">
@@ -660,9 +707,11 @@
             }
             
             // Set edit form values
-            document.getElementById('editDisplayName').value = profile?.display_name || '';
-            document.getElementById('editBio').value = profile?.bio || '';
+            document.getElementById('editFirstName').value = profile?.first_name || '';
+            document.getElementById('editLastName').value = profile?.last_name || '';
+            document.getElementById('editDob').value = profile?.date_of_birth || '';
             document.getElementById('editLocation').value = profile?.location || '';
+            document.getElementById('editBio').value = profile?.bio || '';
             document.getElementById('editWebsite').value = profile?.website || '';
         }
         
@@ -678,17 +727,23 @@
         });
         
         document.getElementById('saveProfileBtn')?.addEventListener('click', async () => {
-            const displayName = document.getElementById('editDisplayName').value;
-            const bio = document.getElementById('editBio').value;
+            const firstName = document.getElementById('editFirstName').value;
+            const lastName = document.getElementById('editLastName').value;
+            const dob = document.getElementById('editDob').value;
             const location = document.getElementById('editLocation').value;
+            const bio = document.getElementById('editBio').value;
             const website = document.getElementById('editWebsite').value;
+            const fullName = firstName && lastName ? `${firstName} ${lastName}` : currentUser.email.split('@')[0];
             
             const { error } = await supabase
                 .from('user_profiles')
                 .update({
-                    display_name: displayName,
-                    bio: bio,
+                    first_name: firstName,
+                    last_name: lastName,
+                    date_of_birth: dob,
                     location: location,
+                    display_name: fullName,
+                    bio: bio,
                     website: website,
                     updated_at: new Date()
                 })
@@ -701,6 +756,13 @@
                 document.getElementById('profileDisplay').style.display = 'block';
                 document.getElementById('profileEdit').style.display = 'none';
                 await loadProfile();
+                // Also update the user_name in posts
+                await supabase
+                    .from('posts')
+                    .update({ user_name: fullName })
+                    .eq('user_id', currentUser.id);
+                await loadFeed();
+                await loadVideos();
             }
         });
         
@@ -1191,21 +1253,53 @@
         // Start the app
         initAuth();
         
-        // Sign up button
+        // UPDATED Sign up button with First Name and Last Name as username
         document.getElementById('signupBtn').onclick = async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const dob = document.getElementById('dob').value;
             
             if (!email || !password) {
                 showMessage(loginMessage, 'Please enter email and password', 'error');
                 return;
             }
             
-            const { error } = await supabase.auth.signUp({ email, password });
+            if (isSignupMode && (!firstName || !lastName)) {
+                showMessage(loginMessage, 'Please enter your First Name and Last Name', 'error');
+                return;
+            }
+            
+            showMessage(loginMessage, 'Creating account...', 'success');
+            
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            
             if (error) {
                 showMessage(loginMessage, error.message, 'error');
-            } else {
+            } else if (data.user) {
+                // Get the full name for display
+                const fullName = `${firstName} ${lastName}`;
+                
+                // Update profile with user's full name as their account name
+                await supabase
+                    .from('user_profiles')
+                    .update({
+                        first_name: firstName,
+                        last_name: lastName,
+                        date_of_birth: dob,
+                        display_name: fullName
+                    })
+                    .eq('id', data.user.id);
+                
                 showMessage(loginMessage, 'Account created! You can now log in.', 'success');
+                
+                // Clear signup fields
+                document.getElementById('firstName').value = '';
+                document.getElementById('lastName').value = '';
+                document.getElementById('dob').value = '';
+                signupFields.classList.remove('show');
+                isSignupMode = false;
             }
         };
         
@@ -1219,9 +1313,15 @@
                 return;
             }
             
+            showMessage(loginMessage, 'Logging in...', 'success');
+            
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
                 showMessage(loginMessage, error.message, 'error');
+            } else {
+                // Clear signup fields on successful login
+                signupFields.classList.remove('show');
+                isSignupMode = false;
             }
         };
         
@@ -1259,7 +1359,7 @@
             };
         });
         
-        // Create post
+        // Create post - Now posts use the user's full name
         document.getElementById('createPostBtn').onclick = async () => {
             if (!currentUser) {
                 alert('Please sign in first!');
@@ -1274,6 +1374,17 @@
                 alert('Please enter text, select an image, or select a video!');
                 return;
             }
+            
+            // Get user's full name for post
+            let { data: profile } = await supabase
+                .from('user_profiles')
+                .select('first_name, last_name')
+                .eq('id', currentUser.id)
+                .single();
+            
+            const userName = (profile?.first_name && profile?.last_name) 
+                ? `${profile.first_name} ${profile.last_name}` 
+                : currentUser.email.split('@')[0];
             
             const btn = document.getElementById('createPostBtn');
             btn.innerText = '⏳ Uploading...';
@@ -1326,7 +1437,7 @@
                 .from('posts')
                 .insert({
                     user_id: currentUser.id,
-                    user_name: currentUser.email.split('@')[0],
+                    user_name: userName,
                     text: text || '',
                     image_url: imageUrl,
                     video_url: videoUrl,
