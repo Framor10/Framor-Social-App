@@ -299,7 +299,6 @@
     <div class="nav-bar">
         <button class="nav-item active" data-panel="feed">📱 Feed</button>
         <button class="nav-item" data-panel="videos">🎵 Reels</button>
-        <input type="file" id="postImage" accept="image/*" style="margin-bottom: 12px;">
         <button class="nav-item" data-panel="chat">💬 Chat</button>
     </div>
 
@@ -646,22 +645,6 @@
                 document.getElementById(`${panelName}Panel`).classList.add('active');
             };
         });
-
-        // Upload image
-    if (imageFile && !mediaUrl) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
-        
-        const { error } = await supabase.storage
-            .from('framor-videos')  // Same bucket
-            .upload(fileName, imageFile);
-        
-        if (!error) {
-            const { data } = supabase.storage.from('framor-videos').getPublicUrl(fileName);
-            mediaUrl = data.publicUrl;
-            mediaType = 'image';
-        }
-    }
         
         // Create post
         document.getElementById('createPostBtn').onclick = async () => {
