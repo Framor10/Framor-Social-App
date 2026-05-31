@@ -316,6 +316,20 @@
             margin: 20px 0 10px;
             font-size: 16px;
         }
+
+        .chat-friend-item {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .chat-friend-item:hover {
+            background: rgba(255, 102, 0, 0.2);
+        }
+
+        .selected-chat {
+            background: rgba(255, 102, 0, 0.3);
+            border: 1px solid #FF6600;
+        }
     </style>
 </head>
 <body>
@@ -369,10 +383,11 @@
     </div>
 
     <div id="chatPanel" class="panel">
-        <div id="chatMessages" style="max-height: 60vh; overflow-y: auto;"></div>
+        <div id="chatFriendsList"></div>
+        <div id="chatMessages" style="max-height: 50vh; overflow-y: auto; margin-top: 16px;"></div>
         <div class="chat-input-container">
-            <input type="text" id="chatInput" placeholder="Type your message...">
-            <button id="sendChatBtn">Send</button>
+            <input type="text" id="chatInput" placeholder="Select a friend to chat..." disabled>
+            <button id="sendChatBtn" disabled>Send</button>
         </div>
     </div>
 </div>
@@ -389,6 +404,7 @@
         // Global variables
         let currentUser = null;
         let realtimeChannels = [];
+        let selectedChatFriend = null;
         
         // DOM elements
         const loginScreen = document.getElementById('loginScreen');
@@ -484,6 +500,7 @@
             } else {
                 alert('Friend accepted!');
                 await loadFriends();
+                await loadChatFriends();
             }
         };
         
@@ -560,6 +577,115 @@
                 }
             }, 500);
         });
+        
+        // ============ PRIVATE CHAT FUNCTIONS ============
+        async function loadChatFriends() {
+            if (!currentUser) return;
+            
+            // Get all accepted friends
+            const { data: friendships } = await supabase
+                .from('friends')
+                .select('*')
+                .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
+                .eq('status', 'accepted');
+            
+            const friendIds = friendships?.map(f => f.user_id === currentUser.id ? f.friend_id : f.user_id) || [];
+            
+            if (friendIds.length === 0) {
+                document.getElementById('chatFriendsList').innerHTML = '<div class="loading">👥 Add friends first to start chatting!</div>';
+                return;
+            }
+            
+            const { data: friends } = await supabase
+                .from('users')
+                .select('id, email')
+                .in('id', friendIds);
+            
+            document.getElementById('chatFriendsList').innerHTML = '<h3>Select a friend to chat:</h3>' + friends?.map(f => `
+                <div class="friend-card chat-friend-item" onclick="selectChatFriend('${f.id}', '${escapeHtml(f.email.split('@')[0])}')">
+                    👤 ${escapeHtml(f.email.split('@')[0])}
+                </div>
+            `).join('');
+        }
+        
+        // Select a friend to chat with
+        window.selectChatFriend = async (friendId, friendName) => {
+            selectedChatFriend = { id: friendId, name: friendName };
+            
+            // Highlight selected friend
+            document.querySelectorAll('.chat-friend-item').forEach(el => {
+                el.classList.remove('selected-chat');
+            });
+            const selectedEl = Array.from(document.querySelectorAll('.chat-friend-item')).find(el => 
+                el.getAttribute('onclick')?.includes(friendId)
+            );
+            if (selectedEl) selectedEl.classList.add('selected-chat');
+            
+            // Enable chat input
+            document.getElementById('chatInput').disabled = false;
+            document.getElementById('sendChatBtn').disabled = false;
+            document.getElementById('chatInput').placeholder = `Message @${friendName}...`;
+            
+            // Load private messages
+            const chatDiv = document.getElementById('chatMessages');
+            chatDiv.innerHTML = '<div class="loading">💬 Loading messages...</div>';
+            
+            const { data: messages, error } = await supabase
+                .from('private_messages')
+                .select('*')
+                .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
+                .order('created_at', { ascending: true });
+            
+            if (error) {
+                chatDiv.innerHTML = '<div class="loading">Error loading messages</div>';
+                return;
+            }
+            
+            if (!messages || messages.length === 0) {
+                chatDiv.innerHTML = '<div class="loading">💬 No messages yet. Say hi!</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const msg of messages) {
+                const isMe = msg.sender_id === currentUser.id;
+                html += `
+                    <div class="message-bubble" style="text-align: ${isMe ? 'right' : 'left'}; background: ${isMe ? '#FF006622' : '#1A1A24'};">
+                        <strong>${isMe ? 'Me' : escapeHtml(friendName)}</strong>: ${escapeHtml(msg.text)}
+                    </div>
+                `;
+            }
+            chatDiv.innerHTML = html;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        };
+        
+        // Send private message
+        async function sendPrivateMessage() {
+            if (!currentUser || !selectedChatFriend) {
+                alert('Select a friend to chat with first!');
+                return;
+            }
+            
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            const { error } = await supabase
+                .from('private_messages')
+                .insert({
+                    sender_id: currentUser.id,
+                    receiver_id: selectedChatFriend.id,
+                    text: text
+                });
+            
+            if (error) {
+                alert('Message error: ' + error.message);
+            } else {
+                input.value = '';
+                // Reload messages
+                window.selectChatFriend(selectedChatFriend.id, selectedChatFriend.name);
+            }
+        }
         
         // Load feed posts
         async function loadFeed() {
@@ -644,48 +770,9 @@
             videoDiv.innerHTML = html;
         }
         
-        // Load chat messages
-        async function loadChat() {
-            const chatDiv = document.getElementById('chatMessages');
-            if (!chatDiv) return;
-            
-            chatDiv.innerHTML = '<div class="loading">Loading messages...</div>';
-            
-            const { data: messages, error } = await supabase
-                .from('messages')
-                .select('*')
-                .order('created_at', { ascending: true });
-            
-            if (error) {
-                chatDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
-                return;
-            }
-            
-            if (!messages || messages.length === 0) {
-                chatDiv.innerHTML = '<div class="loading">💬 No messages yet. Start the conversation!</div>';
-                return;
-            }
-            
-            let html = '';
-            for (const msg of messages) {
-                html += `
-                    <div class="message-bubble">
-                        <strong>${escapeHtml(msg.user_name)}</strong>: ${escapeHtml(msg.text)}
-                    </div>
-                `;
-            }
-            chatDiv.innerHTML = html;
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-        }
-        
         // Realtime subscriptions
         function subscribeToRealtime() {
             if (realtimeChannels.length > 0) return;
-            
-            const messagesChannel = supabase
-                .channel('messages-channel')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => loadChat())
-                .subscribe();
             
             const postsChannel = supabase
                 .channel('posts-channel')
@@ -695,7 +782,22 @@
                 })
                 .subscribe();
             
-            realtimeChannels = [messagesChannel, postsChannel];
+            // Subscribe to private messages
+            const privateMessagesChannel = supabase
+                .channel('private-messages-channel')
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'private_messages',
+                    filter: `receiver_id=eq.${currentUser?.id}`
+                }, () => {
+                    if (selectedChatFriend) {
+                        window.selectChatFriend(selectedChatFriend.id, selectedChatFriend.name);
+                    }
+                })
+                .subscribe();
+            
+            realtimeChannels = [postsChannel, privateMessagesChannel];
         }
         
         function unsubscribeFromRealtime() {
@@ -715,11 +817,12 @@
                 
                 await loadFeed();
                 await loadVideos();
-                await loadChat();
                 await loadFriends();
+                await loadChatFriends();
                 subscribeToRealtime();
             } else {
                 currentUser = null;
+                selectedChatFriend = null;
                 loginScreen.style.display = 'flex';
                 mainApp.style.display = 'none';
                 unsubscribeFromRealtime();
@@ -798,10 +901,13 @@
                 if (panelName === 'friends') {
                     loadFriends();
                 }
+                if (panelName === 'chat') {
+                    loadChatFriends();
+                }
             };
         });
         
-        // Create post (UPDATED to support images)
+        // Create post
         document.getElementById('createPostBtn').onclick = async () => {
             if (!currentUser) {
                 alert('Please sign in first!');
@@ -890,32 +996,15 @@
             }
         };
         
-        // Send chat message
-        document.getElementById('sendChatBtn').onclick = async () => {
-            if (!currentUser) {
-                alert('Please sign in first!');
-                return;
+        // Send private chat message
+        document.getElementById('sendChatBtn').onclick = sendPrivateMessage;
+        
+        // Allow Enter key to send message
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendPrivateMessage();
             }
-            
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-            
-            const { error } = await supabase
-                .from('messages')
-                .insert({
-                    user_id: currentUser.id,
-                    user_name: currentUser.email.split('@')[0],
-                    text: text
-                });
-            
-            if (error) {
-                alert('Message error: ' + error.message);
-            } else {
-                input.value = '';
-                await loadChat();
-            }
-        };
+        });
     })();
 </script>
 </body>
