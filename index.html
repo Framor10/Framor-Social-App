@@ -155,6 +155,76 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        /* Friend card clickable style */
+        .friend-card-clickable {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .friend-card-clickable:hover {
+            background: rgba(255, 102, 0, 0.3);
+            transform: scale(1.01);
+        }
+
+        .timeline-header {
+            background: linear-gradient(135deg, #FF0066, #FF6600);
+            padding: 30px 20px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .timeline-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #1A1A24;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-size: 40px;
+        }
+        .timeline-name {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .timeline-bio {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        .timeline-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        .timeline-stat {
+            text-align: center;
+        }
+        .timeline-stat-number {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .timeline-stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .back-to-profile-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: inline-block;
+        }
+        .back-to-profile-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
         .post-user {
             color: #FF6600;
             font-weight: bold;
@@ -303,15 +373,6 @@
         .post-image {
             max-height: 400px;
             object-fit: cover;
-        }
-
-        .profile-avatar {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin: 0 auto 16px;
-            display: block;
         }
 
         .profile-info {
@@ -494,26 +555,9 @@
     </div>
 
     <div id="profilePanel" class="panel">
-        <div id="profileView">
-            <div class="profile-card" id="profileDisplay">
-                <div class="profile-info">
-                    <div class="profile-stats" id="profileStats"></div>
-                    <button class="edit-profile-btn" id="editProfileBtn">✏️ Edit Profile</button>
-                </div>
-            </div>
+        <div id="profileContent">
+            <!-- This will be dynamically filled with either own profile or friend's timeline -->
         </div>
-        <div id="profileEdit" style="display:none;">
-            <div class="profile-card">
-                <h3>Edit Profile</h3>
-                <input type="text" id="editDisplayName" class="profile-input" placeholder="Display Name">
-                <textarea id="editBio" class="profile-input" rows="3" placeholder="Bio"></textarea>
-                <input type="text" id="editLocation" class="profile-input" placeholder="Location">
-                <input type="text" id="editWebsite" class="profile-input" placeholder="Website">
-                <button id="saveProfileBtn" class="edit-profile-btn">💾 Save Changes</button>
-                <button id="cancelEditBtn" class="logout-btn" style="margin-top: 8px;">Cancel</button>
-            </div>
-        </div>
-        <div id="myPostsList"></div>
     </div>
 
     <div id="chatPanel" class="panel">
@@ -528,25 +572,19 @@
 
 <script>
     (function() {
-        // Supabase configuration
         const SUPABASE_URL = "https://pknztsbadizlcnlzppch.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_Qvi0piL5vNk-734kukD5GA_WtC6nSvb";
-        
-        // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Global variables
         let currentUser = null;
         let realtimeChannels = [];
         let selectedChatFriend = null;
-        let userProfile = null;
+        let viewingUserId = null; // Track whose profile we're viewing
         
-        // DOM elements
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         const loginMessage = document.getElementById('loginMessage');
         
-        // Helper function to show messages
         function showMessage(element, text, type) {
             if (!element) return;
             element.innerHTML = `<div class="message ${type}">${text}</div>`;
@@ -557,7 +595,6 @@
             }, 3000);
         }
         
-        // Escape HTML to prevent XSS
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -568,83 +605,73 @@
             });
         }
         
-        // ============ PROFILE FUNCTIONS ============
-        async function loadProfile() {
-            if (!currentUser) return;
+        // ============ TIMELINE / PROFILE VIEW ============
+        async function showUserTimeline(userId, userName) {
+            console.log("Showing timeline for:", userId, userName);
+            viewingUserId = userId;
+            const isOwnProfile = (userId === currentUser?.id);
             
-            // Get or create user profile
+            // Get user profile
             let { data: profile } = await supabase
                 .from('user_profiles')
                 .select('*')
-                .eq('id', currentUser.id)
+                .eq('id', userId)
                 .single();
             
             if (!profile) {
-                // Create profile if doesn't exist
-                const { data: newProfile } = await supabase
-                    .from('user_profiles')
-                    .insert({
-                        id: currentUser.id,
-                        display_name: currentUser.email.split('@')[0]
-                    })
-                    .select()
-                    .single();
-                profile = newProfile;
+                profile = { display_name: userName, bio: 'No bio yet', location: '', website: '' };
             }
             
-            userProfile = profile;
-            
-            // Get user's posts count
-            const { count: postsCount } = await supabase
+            // Get user's posts
+            const { data: userPosts } = await supabase
                 .from('posts')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', currentUser.id);
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
             
-            // Get friends count
+            // Get friends count for this user
             const { data: friendships } = await supabase
                 .from('friends')
                 .select('*')
-                .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
+                .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
                 .eq('status', 'accepted');
             
             const friendsCount = friendships?.length || 0;
+            const postsCount = userPosts?.length || 0;
+            const displayName = profile.display_name || userName;
             
-            // Display profile
-            const displayName = profile?.display_name || currentUser.email.split('@')[0];
-            const bio = profile?.bio || 'No bio yet';
-            const location = profile?.location || 'No location set';
-            const website = profile?.website || 'No website';
-            
-            document.getElementById('profileDisplay').innerHTML = `
-                <div class="profile-info">
-                    <h3>${escapeHtml(displayName)}</h3>
-                    <p>📧 ${escapeHtml(currentUser.email)}</p>
-                    <p>📝 ${escapeHtml(bio)}</p>
-                    <p>📍 ${escapeHtml(location)}</p>
-                    <p>🔗 ${escapeHtml(website)}</p>
-                    <div class="profile-stats">
-                        <div class="stat">
-                            <div class="stat-value">${postsCount || 0}</div>
-                            <div class="stat-label">Posts</div>
+            // Build timeline HTML
+            let timelineHtml = `
+                <div class="timeline-header">
+                    <div class="timeline-avatar">👤</div>
+                    <div class="timeline-name">${escapeHtml(displayName)}</div>
+                    <div class="timeline-bio">${escapeHtml(profile.bio || 'No bio yet')}</div>
+                    ${profile.location ? `<div class="timeline-bio">📍 ${escapeHtml(profile.location)}</div>` : ''}
+                    <div class="timeline-stats">
+                        <div class="timeline-stat">
+                            <div class="timeline-stat-number">${postsCount}</div>
+                            <div class="timeline-stat-label">Posts</div>
                         </div>
-                        <div class="stat">
-                            <div class="stat-value">${friendsCount}</div>
-                            <div class="stat-label">Friends</div>
+                        <div class="timeline-stat">
+                            <div class="timeline-stat-number">${friendsCount}</div>
+                            <div class="timeline-stat-label">Friends</div>
                         </div>
                     </div>
                 </div>
             `;
             
-            // Load user's own posts
-            const { data: myPosts } = await supabase
-                .from('posts')
-                .select('*')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: false });
+            // Add back button if viewing someone else's profile
+            if (!isOwnProfile) {
+                timelineHtml = `<button class="back-to-profile-btn" onclick="window.goToMyProfile()">← Back to My Profile</button>` + timelineHtml;
+                timelineHtml += `<h3 style="margin-top: 20px;">📝 ${escapeHtml(displayName)}'s Posts</h3>`;
+            } else {
+                timelineHtml += `<div style="margin-top: 20px;"><button class="edit-profile-btn" id="editProfileBtn">✏️ Edit Profile</button></div>`;
+                timelineHtml += `<h3 style="margin-top: 20px;">📝 My Posts</h3>`;
+            }
             
-            const myPostsDiv = document.getElementById('myPostsList');
-            if (myPosts && myPosts.length > 0) {
-                myPostsDiv.innerHTML = '<h3>📝 My Posts</h3>' + myPosts.map(post => `
+            // Add posts
+            if (userPosts && userPosts.length > 0) {
+                timelineHtml += userPosts.map(post => `
                     <div class="post-card">
                         <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
                         <div>${escapeHtml(post.text || '')}</div>
@@ -656,59 +683,94 @@
                     </div>
                 `).join('');
             } else {
-                myPostsDiv.innerHTML = '<h3>📝 My Posts</h3><div class="loading">No posts yet. Create your first post!</div>';
+                timelineHtml += '<div class="loading">No posts yet</div>';
             }
             
-            // Set edit form values
-            document.getElementById('editDisplayName').value = profile?.display_name || '';
-            document.getElementById('editBio').value = profile?.bio || '';
-            document.getElementById('editLocation').value = profile?.location || '';
-            document.getElementById('editWebsite').value = profile?.website || '';
+            document.getElementById('profileContent').innerHTML = timelineHtml;
+            
+            // If it's own profile, attach edit button event
+            if (isOwnProfile) {
+                document.getElementById('editProfileBtn')?.addEventListener('click', () => {
+                    showEditProfileForm();
+                });
+            }
         }
         
-        // Edit profile
-        document.getElementById('editProfileBtn')?.addEventListener('click', () => {
-            document.getElementById('profileDisplay').style.display = 'none';
-            document.getElementById('profileEdit').style.display = 'block';
-        });
-        
-        document.getElementById('cancelEditBtn')?.addEventListener('click', () => {
-            document.getElementById('profileDisplay').style.display = 'block';
-            document.getElementById('profileEdit').style.display = 'none';
-        });
-        
-        document.getElementById('saveProfileBtn')?.addEventListener('click', async () => {
-            const displayName = document.getElementById('editDisplayName').value;
-            const bio = document.getElementById('editBio').value;
-            const location = document.getElementById('editLocation').value;
-            const website = document.getElementById('editWebsite').value;
-            
-            const { error } = await supabase
+        // Edit profile form
+        async function showEditProfileForm() {
+            let { data: profile } = await supabase
                 .from('user_profiles')
-                .update({
-                    display_name: displayName,
-                    bio: bio,
-                    location: location,
-                    website: website,
-                    updated_at: new Date()
-                })
-                .eq('id', currentUser.id);
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
             
-            if (error) {
-                alert('Error updating profile: ' + error.message);
-            } else {
-                alert('Profile updated successfully!');
-                document.getElementById('profileDisplay').style.display = 'block';
-                document.getElementById('profileEdit').style.display = 'none';
-                await loadProfile();
+            if (!profile) {
+                profile = { display_name: '', bio: '', location: '', website: '' };
             }
-        });
+            
+            const editHtml = `
+                <div class="profile-card">
+                    <h3>Edit Profile</h3>
+                    <input type="text" id="editDisplayName" class="search-box" placeholder="Display Name" value="${escapeHtml(profile.display_name || '')}">
+                    <textarea id="editBio" class="search-box" rows="3" placeholder="Bio">${escapeHtml(profile.bio || '')}</textarea>
+                    <input type="text" id="editLocation" class="search-box" placeholder="Location" value="${escapeHtml(profile.location || '')}">
+                    <input type="text" id="editWebsite" class="search-box" placeholder="Website" value="${escapeHtml(profile.website || '')}">
+                    <button id="saveProfileBtn" class="edit-profile-btn">💾 Save Changes</button>
+                    <button id="cancelEditBtn" class="logout-btn" style="margin-top: 8px;">Cancel</button>
+                </div>
+            `;
+            
+            document.getElementById('profileContent').innerHTML = editHtml;
+            
+            document.getElementById('saveProfileBtn').onclick = async () => {
+                const displayName = document.getElementById('editDisplayName').value;
+                const bio = document.getElementById('editBio').value;
+                const location = document.getElementById('editLocation').value;
+                const website = document.getElementById('editWebsite').value;
+                
+                const { error } = await supabase
+                    .from('user_profiles')
+                    .update({
+                        display_name: displayName,
+                        bio: bio,
+                        location: location,
+                        website: website,
+                        updated_at: new Date()
+                    })
+                    .eq('id', currentUser.id);
+                
+                if (error) {
+                    alert('Error updating profile: ' + error.message);
+                } else {
+                    alert('Profile updated successfully!');
+                    showUserTimeline(currentUser.id, currentUser.email.split('@')[0]);
+                }
+            };
+            
+            document.getElementById('cancelEditBtn').onclick = () => {
+                showUserTimeline(currentUser.id, currentUser.email.split('@')[0]);
+            };
+        }
+        
+        // Go to my profile
+        window.goToMyProfile = function() {
+            showUserTimeline(currentUser.id, currentUser.email.split('@')[0]);
+        };
+        
+        // View friend's timeline
+        window.viewFriendTimeline = function(friendId, friendName) {
+            showUserTimeline(friendId, friendName);
+            // Switch to profile panel
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-panel="profile"]').classList.add('active');
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('profilePanel').classList.add('active');
+        };
         
         // ============ FRIENDS FUNCTIONS ============
         async function loadFriends() {
             if (!currentUser) return;
             
-            // Get accepted friends
             const { data: friendships } = await supabase
                 .from('friends')
                 .select('*')
@@ -724,13 +786,15 @@
                     .in('id', friendIds);
                 
                 document.getElementById('friendsList').innerHTML = friends?.map(f => `
-                    <div class="friend-card">👤 ${escapeHtml(f.email.split('@')[0])}</div>
+                    <div class="friend-card friend-card-clickable" onclick="window.viewFriendTimeline('${f.id}', '${escapeHtml(f.email.split('@')[0])}')">
+                        👤 ${escapeHtml(f.email.split('@')[0])}
+                        <div style="font-size: 12px; color: #FF6600; margin-top: 5px;">Click to view profile →</div>
+                    </div>
                 `).join('') || '<div class="loading">No friends yet</div>';
             } else {
                 document.getElementById('friendsList').innerHTML = '<div class="loading">No friends yet. Search above!</div>';
             }
             
-            // Get pending friend requests
             const { data: requests } = await supabase
                 .from('friends')
                 .select('*')
@@ -758,83 +822,36 @@
             }
         }
         
-        // Accept friend request
         window.acceptFriend = async (requesterId) => {
-            const { error } = await supabase
-                .from('friends')
-                .update({ status: 'accepted' })
-                .eq('user_id', requesterId)
-                .eq('friend_id', currentUser.id);
-            
-            if (error) {
-                alert('Error accepting friend: ' + error.message);
-            } else {
-                alert('Friend accepted!');
-                await loadFriends();
-                await loadChatFriends();
-                await loadProfile();
-            }
+            await supabase.from('friends').update({ status: 'accepted' }).eq('user_id', requesterId).eq('friend_id', currentUser.id);
+            await loadFriends();
+            await loadChatFriends();
+            alert('Friend accepted!');
         };
         
-        // Reject friend request
         window.rejectFriend = async (requesterId) => {
-            const { error } = await supabase
-                .from('friends')
-                .delete()
-                .eq('user_id', requesterId)
-                .eq('friend_id', currentUser.id);
-            
-            if (error) {
-                alert('Error rejecting friend: ' + error.message);
-            } else {
-                alert('Friend request rejected');
-                await loadFriends();
-            }
+            await supabase.from('friends').delete().eq('user_id', requesterId).eq('friend_id', currentUser.id);
+            await loadFriends();
+            alert('Friend request rejected');
         };
         
-        // Send friend request
         window.sendFriendRequest = async (friendId) => {
-            const { error } = await supabase
-                .from('friends')
-                .insert({
-                    user_id: currentUser.id,
-                    friend_id: friendId,
-                    status: 'pending'
-                });
-            
-            if (error) {
-                alert('Error: ' + error.message);
-            } else {
+            const { error } = await supabase.from('friends').insert({ user_id: currentUser.id, friend_id: friendId, status: 'pending' });
+            if (error) alert('Error: ' + error.message);
+            else {
                 alert('Friend request sent!');
                 document.getElementById('searchResults').innerHTML = '';
                 document.getElementById('searchUsers').value = '';
             }
         };
         
-        // Search users
         let searchTimeout;
         document.getElementById('searchUsers')?.addEventListener('input', async (e) => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(async () => {
                 const searchTerm = e.target.value.toLowerCase();
-                if (searchTerm.length < 2) {
-                    document.getElementById('searchResults').innerHTML = '';
-                    return;
-                }
-                
-                const { data: users, error } = await supabase
-                    .from('users')
-                    .select('id, email')
-                    .ilike('email', `%${searchTerm}%`)
-                    .neq('id', currentUser.id)
-                    .limit(5);
-                
-                if (error) {
-                    console.error("Search error:", error);
-                    document.getElementById('searchResults').innerHTML = '<div class="loading">Error searching</div>';
-                    return;
-                }
-                
+                if (searchTerm.length < 2) { document.getElementById('searchResults').innerHTML = ''; return; }
+                const { data: users } = await supabase.from('users').select('id, email').ilike('email', `%${searchTerm}%`).neq('id', currentUser.id).limit(5);
                 if (users && users.length > 0) {
                     document.getElementById('searchResults').innerHTML = users.map(u => `
                         <div class="friend-card">
@@ -850,29 +867,13 @@
             }, 500);
         });
         
-        // ============ PRIVATE CHAT FUNCTIONS ============
+        // ============ CHAT FUNCTIONS ============
         async function loadChatFriends() {
             if (!currentUser) return;
-            
-            // Get all accepted friends
-            const { data: friendships } = await supabase
-                .from('friends')
-                .select('*')
-                .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
-                .eq('status', 'accepted');
-            
+            const { data: friendships } = await supabase.from('friends').select('*').or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`).eq('status', 'accepted');
             const friendIds = friendships?.map(f => f.user_id === currentUser.id ? f.friend_id : f.user_id) || [];
-            
-            if (friendIds.length === 0) {
-                document.getElementById('chatFriendsList').innerHTML = '<div class="loading">👥 Add friends first to start chatting!</div>';
-                return;
-            }
-            
-            const { data: friends } = await supabase
-                .from('users')
-                .select('id, email')
-                .in('id', friendIds);
-            
+            if (friendIds.length === 0) { document.getElementById('chatFriendsList').innerHTML = '<div class="loading">👥 Add friends first to start chatting!</div>'; return; }
+            const { data: friends } = await supabase.from('users').select('id, email').in('id', friendIds);
             document.getElementById('chatFriendsList').innerHTML = '<h3>Select a friend to chat:</h3>' + friends?.map(f => `
                 <div class="friend-card chat-friend-item" onclick="selectChatFriend('${f.id}', '${escapeHtml(f.email.split('@')[0])}')">
                     👤 ${escapeHtml(f.email.split('@')[0])}
@@ -880,484 +881,172 @@
             `).join('');
         }
         
-        // Select a friend to chat with
         window.selectChatFriend = async (friendId, friendName) => {
             selectedChatFriend = { id: friendId, name: friendName };
-            
-            // Highlight selected friend
-            document.querySelectorAll('.chat-friend-item').forEach(el => {
-                el.classList.remove('selected-chat');
-            });
-            const selectedEl = Array.from(document.querySelectorAll('.chat-friend-item')).find(el => 
-                el.getAttribute('onclick')?.includes(friendId)
-            );
+            document.querySelectorAll('.chat-friend-item').forEach(el => el.classList.remove('selected-chat'));
+            const selectedEl = Array.from(document.querySelectorAll('.chat-friend-item')).find(el => el.getAttribute('onclick')?.includes(friendId));
             if (selectedEl) selectedEl.classList.add('selected-chat');
-            
-            // Enable chat input
             document.getElementById('chatInput').disabled = false;
             document.getElementById('sendChatBtn').disabled = false;
             document.getElementById('chatInput').placeholder = `Message @${friendName}...`;
-            
-            // Load private messages
             const chatDiv = document.getElementById('chatMessages');
             chatDiv.innerHTML = '<div class="loading">💬 Loading messages...</div>';
-            
-            const { data: messages, error } = await supabase
-                .from('private_messages')
-                .select('*')
-                .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
-                .order('created_at', { ascending: true });
-            
-            if (error) {
-                chatDiv.innerHTML = '<div class="loading">Error loading messages</div>';
-                return;
-            }
-            
-            if (!messages || messages.length === 0) {
-                chatDiv.innerHTML = '<div class="loading">💬 No messages yet. Say hi!</div>';
-                return;
-            }
-            
-            let html = '';
-            for (const msg of messages) {
-                const isMe = msg.sender_id === currentUser.id;
-                html += `
-                    <div class="message-bubble" style="text-align: ${isMe ? 'right' : 'left'}; background: ${isMe ? '#FF006622' : '#1A1A24'};">
-                        <strong>${isMe ? 'Me' : escapeHtml(friendName)}</strong>: ${escapeHtml(msg.text)}
-                    </div>
-                `;
-            }
-            chatDiv.innerHTML = html;
+            const { data: messages } = await supabase.from('private_messages').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
+            if (!messages || messages.length === 0) { chatDiv.innerHTML = '<div class="loading">💬 No messages yet. Say hi!</div>'; return; }
+            chatDiv.innerHTML = messages.map(msg => `<div class="message-bubble" style="text-align: ${msg.sender_id === currentUser.id ? 'right' : 'left'}; background: ${msg.sender_id === currentUser.id ? '#FF006622' : '#1A1A24'}"><strong>${msg.sender_id === currentUser.id ? 'Me' : friendName}</strong>: ${escapeHtml(msg.text)}</div>`).join('');
             chatDiv.scrollTop = chatDiv.scrollHeight;
         };
         
-        // Send private message
         async function sendPrivateMessage() {
-            if (!currentUser || !selectedChatFriend) {
-                alert('Select a friend to chat with first!');
-                return;
-            }
-            
+            if (!currentUser || !selectedChatFriend) { alert('Select a friend to chat with first!'); return; }
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
             if (!text) return;
-            
-            const { error } = await supabase
-                .from('private_messages')
-                .insert({
-                    sender_id: currentUser.id,
-                    receiver_id: selectedChatFriend.id,
-                    text: text
-                });
-            
-            if (error) {
-                alert('Message error: ' + error.message);
-            } else {
-                input.value = '';
-                // Reload messages
-                window.selectChatFriend(selectedChatFriend.id, selectedChatFriend.name);
-            }
+            await supabase.from('private_messages').insert({ sender_id: currentUser.id, receiver_id: selectedChatFriend.id, text: text });
+            input.value = '';
+            selectChatFriend(selectedChatFriend.id, selectedChatFriend.name);
         }
         
-        // ============ LOAD FEED WITH COMMENTS AND LIKES ============
+        // ============ FEED ============
         async function loadFeed() {
             const feedDiv = document.getElementById('feedList');
-            if (!feedDiv) return;
-            
             feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
-            
-            const { data: posts, error } = await supabase
-                .from('posts')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
-            if (error) {
-                feedDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
-                return;
-            }
-            
-            if (!posts || posts.length === 0) {
-                feedDiv.innerHTML = '<div class="loading">✨ No posts yet. Be the first! ✨</div>';
-                return;
-            }
-            
-            // Get user's likes to check which posts they already liked
-            const { data: userLikes } = currentUser ? await supabase
-                .from('post_likes')
-                .select('post_id')
-                .eq('user_id', currentUser.id) : { data: [] };
-            
+            const { data: posts } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+            if (!posts || posts.length === 0) { feedDiv.innerHTML = '<div class="loading">✨ No posts yet. Be the first! ✨</div>'; return; }
+            const { data: userLikes } = currentUser ? await supabase.from('post_likes').select('post_id').eq('user_id', currentUser.id) : { data: [] };
             const likedPostIds = new Set(userLikes?.map(l => l.post_id) || []);
-            
             let html = '';
             for (const post of posts) {
-                // Get comments for this post
-                const { data: comments } = await supabase
-                    .from('comments')
-                    .select('*')
-                    .eq('post_id', post.id)
-                    .order('created_at', { ascending: true });
-                
+                const { data: comments } = await supabase.from('comments').select('*').eq('post_id', post.id).order('created_at', { ascending: true });
                 const hasLiked = likedPostIds.has(post.id);
-                const likeButtonClass = hasLiked ? 'liked' : '';
-                const likeButtonText = hasLiked ? '❤️ Liked' : `❤️ ${post.likes || 0} likes`;
-                
                 html += `
-                    <div class="post-card" id="post-${post.id}">
-                        <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
+                    <div class="post-card">
+                        <div class="post-user" onclick="window.viewFriendTimeline('${post.user_id}', '${escapeHtml(post.user_name)}')" style="cursor:pointer;">👤 ${escapeHtml(post.user_name)}</div>
                         <div>${escapeHtml(post.text || '')}</div>
-                        ${post.image_url ? `<img src="${post.image_url}" class="post-image" alt="Post image">` : ''}
+                        ${post.image_url ? `<img src="${post.image_url}" class="post-image">` : ''}
                         ${post.video_url ? `<video controls src="${post.video_url}"></video>` : ''}
                         <div class="post-stats">
-                            <button class="like-btn ${likeButtonClass}" data-id="${post.id}" data-has-liked="${hasLiked}">
-                                ${likeButtonText}
-                            </button>
+                            <button class="like-btn" data-id="${post.id}" data-has-liked="${hasLiked}">${hasLiked ? '❤️ Liked' : `❤️ ${post.likes || 0} likes`}</button>
                             <button class="comment-btn" data-id="${post.id}">💬 ${comments?.length || 0} comments</button>
                         </div>
                         <div class="comments-section" id="comments-${post.id}" style="display:none">
-                            <div id="comments-list-${post.id}">
-                                ${comments?.map(c => `<div class="comment"><strong>${escapeHtml(c.user_name)}</strong>: ${escapeHtml(c.text)}</div>`).join('') || '<div class="comment">No comments yet</div>'}
-                            </div>
-                            <div class="comment-input">
-                                <input type="text" id="comment-input-${post.id}" placeholder="Write a comment...">
-                                <button class="submit-comment" data-id="${post.id}">Post</button>
-                            </div>
+                            <div id="comments-list-${post.id}">${comments?.map(c => `<div class="comment"><strong>${escapeHtml(c.user_name)}</strong>: ${escapeHtml(c.text)}</div>`).join('') || '<div class="comment">No comments yet</div>'}</div>
+                            <div class="comment-input"><input type="text" id="comment-input-${post.id}" placeholder="Write a comment..."><button class="submit-comment" data-id="${post.id}">Post</button></div>
                         </div>
                     </div>
                 `;
             }
             feedDiv.innerHTML = html;
-            
-            // Like button events (One like per user)
-            document.querySelectorAll('.like-btn').forEach(btn => {
-                btn.onclick = async function() {
-                    const postId = parseInt(this.getAttribute('data-id'));
-                    const hasLiked = this.getAttribute('data-has-liked') === 'true';
-                    
-                    if (hasLiked) {
-                        // Unlike: remove from post_likes and decrement count
-                        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
-                        const post = posts.find(p => p.id === postId);
-                        await supabase.from('posts').update({ likes: (post?.likes || 0) - 1 }).eq('id', postId);
-                    } else {
-                        // Like: add to post_likes and increment count
-                        await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
-                        const post = posts.find(p => p.id === postId);
-                        await supabase.from('posts').update({ likes: (post?.likes || 0) + 1 }).eq('id', postId);
-                    }
-                    loadFeed();
-                };
-            });
-            
-            // Comment toggle buttons
-            document.querySelectorAll('.comment-btn').forEach(btn => {
-                btn.onclick = () => {
-                    const id = btn.getAttribute('data-id');
-                    const section = document.getElementById(`comments-${id}`);
-                    section.style.display = section.style.display === 'none' ? 'block' : 'none';
-                };
-            });
-            
-            // Submit comment buttons
-            document.querySelectorAll('.submit-comment').forEach(btn => {
-                btn.onclick = async () => {
-                    const postId = btn.getAttribute('data-id');
-                    const input = document.getElementById(`comment-input-${postId}`);
-                    const text = input.value.trim();
-                    if (!text || !currentUser) return;
-                    
-                    await supabase.from('comments').insert({
-                        post_id: parseInt(postId),
-                        user_id: currentUser.id,
-                        user_name: currentUser.email.split('@')[0],
-                        text: text
-                    });
-                    input.value = '';
-                    loadFeed();
-                };
-            });
+            document.querySelectorAll('.like-btn').forEach(btn => { btn.onclick = async function() {
+                const postId = parseInt(this.dataset.id);
+                const hasLiked = this.dataset.hasLiked === 'true';
+                if (hasLiked) { await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id); const post = posts.find(p => p.id === postId); await supabase.from('posts').update({ likes: (post?.likes || 0) - 1 }).eq('id', postId); }
+                else { await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id }); const post = posts.find(p => p.id === postId); await supabase.from('posts').update({ likes: (post?.likes || 0) + 1 }).eq('id', postId); }
+                loadFeed();
+            }; });
+            document.querySelectorAll('.comment-btn').forEach(btn => { btn.onclick = () => { const id = btn.dataset.id; const section = document.getElementById(`comments-${id}`); section.style.display = section.style.display === 'none' ? 'block' : 'none'; }; });
+            document.querySelectorAll('.submit-comment').forEach(btn => { btn.onclick = async () => {
+                const postId = btn.dataset.id;
+                const input = document.getElementById(`comment-input-${postId}`);
+                const text = input.value.trim();
+                if (!text || !currentUser) return;
+                await supabase.from('comments').insert({ post_id: parseInt(postId), user_id: currentUser.id, user_name: currentUser.email.split('@')[0], text: text });
+                input.value = ''; loadFeed();
+            }; });
         }
         
-        // Load videos/reels
         async function loadVideos() {
             const videoDiv = document.getElementById('videoList');
-            if (!videoDiv) return;
-            
             videoDiv.innerHTML = '<div class="loading">Loading reels...</div>';
-            
-            const { data: posts, error } = await supabase
-                .from('posts')
-                .select('*')
-                .not('video_url', 'is', null)
-                .order('created_at', { ascending: false });
-            
-            if (error) {
-                videoDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
-                return;
-            }
-            
-            if (!posts || posts.length === 0) {
-                videoDiv.innerHTML = '<div class="loading">🎬 No reels yet. Upload a video!</div>';
-                return;
-            }
-            
-            let html = '';
-            for (const post of posts) {
-                html += `
-                    <div class="post-card">
-                        <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
-                        <video controls autoplay muted loop src="${post.video_url}"></video>
-                        <div style="margin-top: 10px;"><strong>${escapeHtml(post.user_name)}</strong>: ${escapeHtml(post.text || '')} ❤️ ${post.likes || 0}</div>
-                    </div>
-                `;
-            }
-            videoDiv.innerHTML = html;
+            const { data: posts } = await supabase.from('posts').select('*').not('video_url', 'is', null).order('created_at', { ascending: false });
+            if (!posts || posts.length === 0) { videoDiv.innerHTML = '<div class="loading">🎬 No reels yet. Upload a video!</div>'; return; }
+            videoDiv.innerHTML = posts.map(post => `<div class="post-card"><div class="post-user" onclick="window.viewFriendTimeline('${post.user_id}', '${escapeHtml(post.user_name)}')" style="cursor:pointer;">👤 ${escapeHtml(post.user_name)}</div><video controls autoplay muted loop src="${post.video_url}"></video><div>${escapeHtml(post.text || '')} ❤️ ${post.likes || 0}</div></div>`).join('');
         }
         
-        // Realtime subscriptions
-        function subscribeToRealtime() {
-            if (realtimeChannels.length > 0) return;
-            
-            const postsChannel = supabase
-                .channel('posts-channel')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
-                    loadFeed();
-                    loadVideos();
-                    loadProfile();
-                })
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
-                    loadFeed();
-                })
-                .subscribe();
-            
-            // Subscribe to private messages
-            const privateMessagesChannel = supabase
-                .channel('private-messages-channel')
-                .on('postgres_changes', { 
-                    event: 'INSERT', 
-                    schema: 'public', 
-                    table: 'private_messages',
-                    filter: `receiver_id=eq.${currentUser?.id}`
-                }, () => {
-                    if (selectedChatFriend) {
-                        window.selectChatFriend(selectedChatFriend.id, selectedChatFriend.name);
-                    }
-                })
-                .subscribe();
-            
-            realtimeChannels = [postsChannel, privateMessagesChannel];
-        }
-        
-        function unsubscribeFromRealtime() {
-            realtimeChannels.forEach(channel => {
-                supabase.removeChannel(channel);
-            });
-            realtimeChannels = [];
-        }
-        
-        // Set app state based on auth
-        async function setAppState(session) {
-            if (session && session.user) {
-                currentUser = session.user;
-                loginScreen.style.display = 'none';
-                mainApp.style.display = 'flex';
-                loginMessage.innerHTML = '';
-                
-                await loadFeed();
-                await loadVideos();
-                await loadFriends();
-                await loadProfile();
-                await loadChatFriends();
-                subscribeToRealtime();
-            } else {
-                currentUser = null;
-                selectedChatFriend = null;
-                loginScreen.style.display = 'flex';
-                mainApp.style.display = 'none';
-                unsubscribeFromRealtime();
-            }
-        }
-        
-        // Initialize auth
-        async function initAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            await setAppState(session);
-            
-            supabase.auth.onAuthStateChange((event, session) => {
-                setAppState(session);
-            });
-        }
-        
-        // Start the app
-        initAuth();
-        
-        // Sign up button
-        document.getElementById('signupBtn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            if (!email || !password) {
-                showMessage(loginMessage, 'Please enter email and password', 'error');
-                return;
-            }
-            
-            const { error } = await supabase.auth.signUp({ email, password });
-            if (error) {
-                showMessage(loginMessage, error.message, 'error');
-            } else {
-                showMessage(loginMessage, 'Account created! You can now log in.', 'success');
-            }
-        };
-        
-        // Login button
-        document.getElementById('loginBtn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            if (!email || !password) {
-                showMessage(loginMessage, 'Please enter email and password', 'error');
-                return;
-            }
-            
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                showMessage(loginMessage, error.message, 'error');
-            }
-        };
-        
-        // Google login
-        document.getElementById('googleBtn').onclick = async () => {
-            const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-            if (error) {
-                showMessage(loginMessage, error.message, 'error');
-            }
-        };
-        
-        // Logout button
-        document.getElementById('logoutBtn').onclick = async () => {
-            await supabase.auth.signOut();
-        };
-        
-        // Navigation
-        document.querySelectorAll('.nav-item').forEach(btn => {
-            btn.onclick = () => {
-                const panelName = btn.getAttribute('data-panel');
-                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-                document.getElementById(`${panelName}Panel`).classList.add('active');
-                
-                if (panelName === 'friends') {
-                    loadFriends();
-                }
-                if (panelName === 'profile') {
-                    loadProfile();
-                }
-                if (panelName === 'chat') {
-                    loadChatFriends();
-                }
-            };
-        });
-        
-        // Create post
         document.getElementById('createPostBtn').onclick = async () => {
-            if (!currentUser) {
-                alert('Please sign in first!');
-                return;
-            }
-            
+            if (!currentUser) { alert('Please sign in first!'); return; }
             const text = document.getElementById('postText').value;
             const imageFile = document.getElementById('postImage').files[0];
             const videoFile = document.getElementById('postVideo').files[0];
-            
-            if (!text && !imageFile && !videoFile) {
-                alert('Please enter text, select an image, or select a video!');
-                return;
-            }
-            
+            if (!text && !imageFile && !videoFile) { alert('Enter text or select media!'); return; }
             const btn = document.getElementById('createPostBtn');
             btn.innerText = '⏳ Uploading...';
             btn.disabled = true;
-            
-            let imageUrl = null;
-            let videoUrl = null;
-            
-            // Upload image if selected
+            let imageUrl = null, videoUrl = null;
             if (imageFile) {
-                const fileName = `image_${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-                const { error: uploadError } = await supabase.storage
-                    .from('framor-videos')
-                    .upload(fileName, imageFile);
-                
-                if (uploadError) {
-                    alert('Image upload failed: ' + uploadError.message);
-                    btn.innerText = '✨ Post to FRAMOR';
-                    btn.disabled = false;
-                    return;
-                }
-                
-                const { data: urlData } = supabase.storage
-                    .from('framor-videos')
-                    .getPublicUrl(fileName);
-                imageUrl = urlData.publicUrl;
+                const fileName = `img_${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                const { error } = await supabase.storage.from('framor-videos').upload(fileName, imageFile);
+                if (!error) imageUrl = supabase.storage.from('framor-videos').getPublicUrl(fileName).data.publicUrl;
             }
-            
-            // Upload video if selected
             if (videoFile) {
-                const fileName = `video_${Date.now()}_${videoFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-                const { error: uploadError } = await supabase.storage
-                    .from('framor-videos')
-                    .upload(fileName, videoFile);
-                
-                if (uploadError) {
-                    alert('Video upload failed: ' + uploadError.message);
-                    btn.innerText = '✨ Post to FRAMOR';
-                    btn.disabled = false;
-                    return;
-                }
-                
-                const { data: urlData } = supabase.storage
-                    .from('framor-videos')
-                    .getPublicUrl(fileName);
-                videoUrl = urlData.publicUrl;
+                const fileName = `vid_${Date.now()}_${videoFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                const { error } = await supabase.storage.from('framor-videos').upload(fileName, videoFile);
+                if (!error) videoUrl = supabase.storage.from('framor-videos').getPublicUrl(fileName).data.publicUrl;
             }
-            
-            const { error } = await supabase
-                .from('posts')
-                .insert({
-                    user_id: currentUser.id,
-                    user_name: currentUser.email.split('@')[0],
-                    text: text || '',
-                    image_url: imageUrl,
-                    video_url: videoUrl,
-                    likes: 0
-                });
-            
+            const { error } = await supabase.from('posts').insert({ user_id: currentUser.id, user_name: currentUser.email.split('@')[0], text: text || '', image_url: imageUrl, video_url: videoUrl, likes: 0 });
             btn.innerText = '✨ Post to FRAMOR';
             btn.disabled = false;
-            
-            if (error) {
-                alert('Post error: ' + error.message);
-            } else {
+            if (error) alert('Error: ' + error.message);
+            else {
                 document.getElementById('postText').value = '';
                 document.getElementById('postImage').value = '';
                 document.getElementById('postVideo').value = '';
-                await loadFeed();
-                await loadVideos();
-                await loadProfile();
-                alert(imageUrl ? '✅ Image posted!' : videoUrl ? '✅ Video posted!' : '✅ Post created!');
+                loadFeed();
+                loadVideos();
+                alert('Posted!');
             }
         };
         
-        // Send private chat message
+        // ============ AUTH ============
+        document.getElementById('signupBtn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await supabase.auth.signUp({ email, password });
+            document.getElementById('loginMessage').innerHTML = error ? `<div class="error">${error.message}</div>` : '<div class="success">Account created! Login now.</div>';
+        };
+        document.getElementById('loginBtn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) document.getElementById('loginMessage').innerHTML = `<div class="error">${error.message}</div>`;
+        };
+        document.getElementById('googleBtn').onclick = async () => { await supabase.auth.signInWithOAuth({ provider: 'google' }); };
+        document.getElementById('logoutBtn').onclick = async () => { await supabase.auth.signOut(); };
         document.getElementById('sendChatBtn').onclick = sendPrivateMessage;
+        document.getElementById('chatInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendPrivateMessage(); });
         
-        // Allow Enter key to send message
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendPrivateMessage();
-            }
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.onclick = () => {
+                const panel = btn.dataset.panel;
+                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                document.getElementById(`${panel}Panel`).classList.add('active');
+                if (panel === 'friends') loadFriends();
+                if (panel === 'profile') showUserTimeline(currentUser.id, currentUser.email.split('@')[0]);
+                if (panel === 'chat') loadChatFriends();
+            };
         });
+        
+        async function setAppState(session) {
+            if (session?.user) {
+                currentUser = session.user;
+                loginScreen.style.display = 'none';
+                mainApp.style.display = 'flex';
+                await loadFeed();
+                await loadVideos();
+                await loadFriends();
+                await showUserTimeline(currentUser.id, currentUser.email.split('@')[0]);
+                await loadChatFriends();
+            } else {
+                currentUser = null;
+                loginScreen.style.display = 'flex';
+                mainApp.style.display = 'none';
+            }
+        }
+        
+        supabase.auth.getSession().then(({ data: { session } }) => setAppState(session));
+        supabase.auth.onAuthStateChange((event, session) => setAppState(session));
     })();
 </script>
 </body>
