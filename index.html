@@ -239,10 +239,15 @@
             cursor: pointer;
         }
 
-        video {
+        video, .post-image {
             width: 100%;
             border-radius: 16px;
             margin-top: 8px;
+        }
+
+        .post-image {
+            max-height: 400px;
+            object-fit: cover;
         }
 
         .message {
@@ -266,13 +271,6 @@
             text-align: center;
             padding: 40px;
             color: #888;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #888;
-            font-size: 16px;
         }
     </style>
 </head>
@@ -305,7 +303,8 @@
     <div id="feedPanel" class="panel active">
         <div class="create-post">
             <textarea id="postText" placeholder="What's on your mind? 🔥" rows="2"></textarea>
-            <input type="file" id="postVideo" accept="video/*">
+            <input type="file" id="postImage" accept="image/*" placeholder="📸 Image">
+            <input type="file" id="postVideo" accept="video/*" placeholder="🎥 Video">
             <button id="createPostBtn">✨ Post to FRAMOR</button>
         </div>
         <div id="feedList"></div>
@@ -330,17 +329,19 @@
         const SUPABASE_URL = "https://pknztsbadizlcnlzppch.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_Qvi0piL5vNk-734kukD5GA_WtC6nSvb";
         
-        console.log("🚀 FRAMOR Starting...");
-        
+        // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
+        // Global variables
         let currentUser = null;
         let realtimeChannels = [];
         
+        // DOM elements
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         const loginMessage = document.getElementById('loginMessage');
         
+        // Helper function to show messages
         function showMessage(element, text, type) {
             if (!element) return;
             element.innerHTML = `<div class="message ${type}">${text}</div>`;
@@ -351,6 +352,7 @@
             }, 3000);
         }
         
+        // Escape HTML to prevent XSS
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -361,153 +363,128 @@
             });
         }
         
-        // Load feed posts - FIXED to always show something
+        // Load feed posts
         async function loadFeed() {
             const feedDiv = document.getElementById('feedList');
             if (!feedDiv) return;
             
-            feedDiv.innerHTML = '<div class="loading">📱 Loading feed...</div>';
+            feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
             
-            try {
-                const { data: posts, error } = await supabase
-                    .from('posts')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                
-                if (error) {
-                    console.error("Feed error:", error);
-                    feedDiv.innerHTML = `<div class="empty-state">⚠️ Error loading posts<br><small>${error.message}</small></div>`;
-                    return;
-                }
-                
-                if (!posts || posts.length === 0) {
-                    feedDiv.innerHTML = `
-                        <div class="empty-state">
-                            ✨ No posts yet!<br><br>
-                            Be the first to create a post above! ✨
-                        </div>
-                    `;
-                    return;
-                }
-                
-                let html = '';
-                for (const post of posts) {
-                    html += `
-                        <div class="post-card">
-                            <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
-                            <div>${escapeHtml(post.text || '')}</div>
-                            ${post.video_url ? `<video controls src="${post.video_url}"></video>` : ''}
-                            <button class="like-btn" data-id="${post.id}">❤️ ${post.likes || 0} likes</button>
-                        </div>
-                    `;
-                }
-                feedDiv.innerHTML = html;
-                
-                // Attach like button events
-                document.querySelectorAll('.like-btn').forEach(btn => {
-                    btn.onclick = async function() {
-                        const id = this.getAttribute('data-id');
+            const { data: posts, error } = await supabase
+                .from('posts')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                feedDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+                return;
+            }
+            
+            if (!posts || posts.length === 0) {
+                feedDiv.innerHTML = '<div class="loading">✨ No posts yet. Be the first! ✨</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const post of posts) {
+                html += `
+                    <div class="post-card">
+                        <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
+                        <div>${escapeHtml(post.text || '')}</div>
+                        ${post.image_url ? `<img src="${post.image_url}" class="post-image" alt="Post image">` : ''}
+                        ${post.video_url ? `<video controls src="${post.video_url}"></video>` : ''}
+                        <button class="like-btn" data-id="${post.id}">❤️ ${post.likes || 0} likes</button>
+                    </div>
+                `;
+            }
+            feedDiv.innerHTML = html;
+            
+            // Attach like button events
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.onclick = async function() {
+                    const id = this.getAttribute('data-id');
+                    const { error } = await supabase
+                        .from('posts')
+                        .update({ likes: supabase.rpc('increment', { row_id: id }) });
+                    
+                    if (error) {
+                        // Fallback if increment function doesn't exist
                         const post = posts.find(p => String(p.id) === id);
                         const newLikes = (post?.likes || 0) + 1;
                         await supabase.from('posts').update({ likes: newLikes }).eq('id', id);
-                        await loadFeed();
-                    };
-                });
-            } catch (err) {
-                console.error("Feed exception:", err);
-                feedDiv.innerHTML = `<div class="empty-state">⚠️ Connection error: ${err.message}</div>`;
-            }
+                    }
+                    loadFeed();
+                };
+            });
         }
         
-        // Load videos/reels - FIXED to always show something
+        // Load videos/reels
         async function loadVideos() {
             const videoDiv = document.getElementById('videoList');
             if (!videoDiv) return;
             
-            videoDiv.innerHTML = '<div class="loading">🎬 Loading reels...</div>';
+            videoDiv.innerHTML = '<div class="loading">Loading reels...</div>';
             
-            try {
-                const { data: posts, error } = await supabase
-                    .from('posts')
-                    .select('*')
-                    .not('video_url', 'is', null)
-                    .order('created_at', { ascending: false });
-                
-                if (error) {
-                    console.error("Videos error:", error);
-                    videoDiv.innerHTML = `<div class="empty-state">⚠️ Error loading reels<br><small>${error.message}</small></div>`;
-                    return;
-                }
-                
-                if (!posts || posts.length === 0) {
-                    videoDiv.innerHTML = `
-                        <div class="empty-state">
-                            🎬 No reels yet!<br><br>
-                            Upload a video in the Feed tab! 🎥
-                        </div>
-                    `;
-                    return;
-                }
-                
-                let html = '';
-                for (const post of posts) {
-                    html += `
-                        <div class="post-card">
-                            <video controls autoplay muted loop src="${post.video_url}" style="width:100%; border-radius:16px;"></video>
-                            <div style="margin-top: 10px;"><strong>${escapeHtml(post.user_name)}</strong>: ${escapeHtml(post.text || '')} ❤️ ${post.likes || 0}</div>
-                        </div>
-                    `;
-                }
-                videoDiv.innerHTML = html;
-            } catch (err) {
-                console.error("Videos exception:", err);
-                videoDiv.innerHTML = `<div class="empty-state">⚠️ Connection error: ${err.message}</div>`;
+            const { data: posts, error } = await supabase
+                .from('posts')
+                .select('*')
+                .not('video_url', 'is', null)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                videoDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+                return;
             }
+            
+            if (!posts || posts.length === 0) {
+                videoDiv.innerHTML = '<div class="loading">🎬 No reels yet. Upload a video!</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const post of posts) {
+                html += `
+                    <div class="post-card">
+                        <video controls autoplay muted loop src="${post.video_url}"></video>
+                        <div style="margin-top: 10px;"><strong>${escapeHtml(post.user_name)}</strong>: ${escapeHtml(post.text || '')} ❤️ ${post.likes || 0}</div>
+                    </div>
+                `;
+            }
+            videoDiv.innerHTML = html;
         }
         
-        // Load chat messages - FIXED to always show something
+        // Load chat messages
         async function loadChat() {
             const chatDiv = document.getElementById('chatMessages');
             if (!chatDiv) return;
             
-            chatDiv.innerHTML = '<div class="loading">💬 Loading messages...</div>';
+            chatDiv.innerHTML = '<div class="loading">Loading messages...</div>';
             
-            try {
-                const { data: messages, error } = await supabase
-                    .from('messages')
-                    .select('*')
-                    .order('created_at', { ascending: true });
-                
-                if (error) {
-                    console.error("Chat error:", error);
-                    chatDiv.innerHTML = `<div class="empty-state">⚠️ Error loading messages<br><small>${error.message}</small></div>`;
-                    return;
-                }
-                
-                if (!messages || messages.length === 0) {
-                    chatDiv.innerHTML = `
-                        <div class="empty-state">
-                            💬 No messages yet!<br><br>
-                            Send the first message below! 💬
-                        </div>
-                    `;
-                    return;
-                }
-                
-                let html = '';
-                for (const msg of messages) {
-                    html += `
-                        <div class="message-bubble">
-                            <strong>${escapeHtml(msg.user_name)}</strong>: ${escapeHtml(msg.text)}
-                        </div>
-                    `;
-                }
-                chatDiv.innerHTML = html;
-                chatDiv.scrollTop = chatDiv.scrollHeight;
-            } catch (err) {
-                console.error("Chat exception:", err);
-                chatDiv.innerHTML = `<div class="empty-state">⚠️ Connection error: ${err.message}</div>`;
+            const { data: messages, error } = await supabase
+                .from('messages')
+                .select('*')
+                .order('created_at', { ascending: true });
+            
+            if (error) {
+                chatDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+                return;
             }
+            
+            if (!messages || messages.length === 0) {
+                chatDiv.innerHTML = '<div class="loading">💬 No messages yet. Start the conversation!</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const msg of messages) {
+                html += `
+                    <div class="message-bubble">
+                        <strong>${escapeHtml(msg.user_name)}</strong>: ${escapeHtml(msg.text)}
+                    </div>
+                `;
+            }
+            chatDiv.innerHTML = html;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
         }
         
         // Realtime subscriptions
@@ -539,49 +516,35 @@
         
         // Set app state based on auth
         async function setAppState(session) {
-            console.log("setAppState called:", session?.user?.email || "No user");
-            
             if (session && session.user) {
                 currentUser = session.user;
                 loginScreen.style.display = 'none';
                 mainApp.style.display = 'flex';
                 loginMessage.innerHTML = '';
                 
-                // Show loading in all panels
-                document.getElementById('feedList').innerHTML = '<div class="loading">📱 Loading feed...</div>';
-                document.getElementById('videoList').innerHTML = '<div class="loading">🎬 Loading reels...</div>';
-                document.getElementById('chatMessages').innerHTML = '<div class="loading">💬 Loading messages...</div>';
-                
                 await loadFeed();
                 await loadVideos();
                 await loadChat();
                 subscribeToRealtime();
-                
-                console.log("✅ Logged in as:", currentUser.email);
             } else {
                 currentUser = null;
                 loginScreen.style.display = 'flex';
                 mainApp.style.display = 'none';
                 unsubscribeFromRealtime();
-                console.log("❌ Not logged in");
             }
         }
         
         // Initialize auth
         async function initAuth() {
-            console.log("Initializing auth...");
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (error) {
-                console.error("Session error:", error);
-            }
+            const { data: { session } } = await supabase.auth.getSession();
             await setAppState(session);
             
             supabase.auth.onAuthStateChange((event, session) => {
-                console.log("Auth state change - Event:", event);
                 setAppState(session);
             });
         }
         
+        // Start the app
         initAuth();
         
         // Sign up button
@@ -594,13 +557,11 @@
                 return;
             }
             
-            showMessage(loginMessage, 'Creating account...', 'success');
-            
             const { error } = await supabase.auth.signUp({ email, password });
             if (error) {
                 showMessage(loginMessage, error.message, 'error');
             } else {
-                showMessage(loginMessage, '✅ Account created! You can now log in.', 'success');
+                showMessage(loginMessage, 'Account created! You can now log in.', 'success');
             }
         };
         
@@ -613,8 +574,6 @@
                 showMessage(loginMessage, 'Please enter email and password', 'error');
                 return;
             }
-            
-            showMessage(loginMessage, 'Logging in...', 'success');
             
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
@@ -646,7 +605,7 @@
             };
         });
         
-        // Create post
+        // Create post (UPDATED to support images)
         document.getElementById('createPostBtn').onclick = async () => {
             if (!currentUser) {
                 alert('Please sign in first!');
@@ -654,22 +613,52 @@
             }
             
             const text = document.getElementById('postText').value;
+            const imageFile = document.getElementById('postImage').files[0];
             const videoFile = document.getElementById('postVideo').files[0];
             
-            if (!text && !videoFile) {
-                alert('Please enter some text or select a video!');
+            if (!text && !imageFile && !videoFile) {
+                alert('Please enter text, select an image, or select a video!');
                 return;
             }
             
+            const btn = document.getElementById('createPostBtn');
+            btn.innerText = '⏳ Uploading...';
+            btn.disabled = true;
+            
+            let imageUrl = null;
             let videoUrl = null;
+            
+            // Upload image if selected
+            if (imageFile) {
+                const fileName = `image_${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('framor-videos')
+                    .upload(fileName, imageFile);
+                
+                if (uploadError) {
+                    alert('Image upload failed: ' + uploadError.message);
+                    btn.innerText = '✨ Post to FRAMOR';
+                    btn.disabled = false;
+                    return;
+                }
+                
+                const { data: urlData } = supabase.storage
+                    .from('framor-videos')
+                    .getPublicUrl(fileName);
+                imageUrl = urlData.publicUrl;
+            }
+            
+            // Upload video if selected
             if (videoFile) {
-                const fileName = `${Date.now()}_${videoFile.name}`;
+                const fileName = `video_${Date.now()}_${videoFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
                 const { error: uploadError } = await supabase.storage
                     .from('framor-videos')
                     .upload(fileName, videoFile);
                 
                 if (uploadError) {
-                    alert('Upload failed: ' + uploadError.message);
+                    alert('Video upload failed: ' + uploadError.message);
+                    btn.innerText = '✨ Post to FRAMOR';
+                    btn.disabled = false;
                     return;
                 }
                 
@@ -685,19 +674,23 @@
                     user_id: currentUser.id,
                     user_name: currentUser.email.split('@')[0],
                     text: text || '',
+                    image_url: imageUrl,
                     video_url: videoUrl,
-                     image_url: mediaType === 'image' ? mediaUrl : null, 
                     likes: 0
                 });
+            
+            btn.innerText = '✨ Post to FRAMOR';
+            btn.disabled = false;
             
             if (error) {
                 alert('Post error: ' + error.message);
             } else {
                 document.getElementById('postText').value = '';
+                document.getElementById('postImage').value = '';
                 document.getElementById('postVideo').value = '';
                 await loadFeed();
                 await loadVideos();
-                alert('✅ Post created successfully!');
+                alert(imageUrl ? '✅ Image posted!' : videoUrl ? '✅ Video posted!' : '✅ Post created!');
             }
         };
         
@@ -724,7 +717,6 @@
                 alert('Message error: ' + error.message);
             } else {
                 input.value = '';
-                await loadChat();
             }
         };
     })();
