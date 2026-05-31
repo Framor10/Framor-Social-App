@@ -161,14 +161,64 @@
             margin-bottom: 8px;
         }
 
-        .like-btn {
+        .post-stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .like-btn, .comment-btn {
             background: none;
             border: none;
             color: #FF0066;
             cursor: pointer;
-            margin-top: 8px;
             font-size: 14px;
             padding: 5px 10px;
+        }
+
+        .comment-btn {
+            color: #FFCC00;
+        }
+
+        .comments-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .comment {
+            padding: 8px 0;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .comment strong {
+            color: #FF6600;
+        }
+
+        .comment-input {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .comment-input input {
+            flex: 1;
+            background: #0A0A0F;
+            border: 1px solid #333;
+            padding: 8px;
+            border-radius: 20px;
+            color: white;
+            font-size: 13px;
+        }
+
+        .comment-input button {
+            background: linear-gradient(135deg, #FF0066, #FF6600);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
         }
 
         .chat-input-container {
@@ -329,6 +379,11 @@
         .selected-chat {
             background: rgba(255, 102, 0, 0.3);
             border: 1px solid #FF6600;
+        }
+
+        .liked {
+            color: #FF0066;
+            opacity: 0.7;
         }
     </style>
 </head>
@@ -687,7 +742,7 @@
             }
         }
         
-        // Load feed posts
+        // ============ LOAD FEED WITH COMMENTS AND LIKES ============
         async function loadFeed() {
             const feedDiv = document.getElementById('feedList');
             if (!feedDiv) return;
@@ -709,27 +764,98 @@
                 return;
             }
             
+            // Get user's likes to check which posts they already liked
+            const { data: userLikes } = currentUser ? await supabase
+                .from('post_likes')
+                .select('post_id')
+                .eq('user_id', currentUser.id) : { data: [] };
+            
+            const likedPostIds = new Set(userLikes?.map(l => l.post_id) || []);
+            
             let html = '';
             for (const post of posts) {
+                // Get comments for this post
+                const { data: comments } = await supabase
+                    .from('comments')
+                    .select('*')
+                    .eq('post_id', post.id)
+                    .order('created_at', { ascending: true });
+                
+                const hasLiked = likedPostIds.has(post.id);
+                const likeButtonClass = hasLiked ? 'liked' : '';
+                const likeButtonText = hasLiked ? '❤️ Liked' : `❤️ ${post.likes || 0} likes`;
+                
                 html += `
-                    <div class="post-card">
+                    <div class="post-card" id="post-${post.id}">
                         <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
                         <div>${escapeHtml(post.text || '')}</div>
                         ${post.image_url ? `<img src="${post.image_url}" class="post-image" alt="Post image">` : ''}
                         ${post.video_url ? `<video controls src="${post.video_url}"></video>` : ''}
-                        <button class="like-btn" data-id="${post.id}">❤️ ${post.likes || 0} likes</button>
+                        <div class="post-stats">
+                            <button class="like-btn ${likeButtonClass}" data-id="${post.id}" data-has-liked="${hasLiked}">
+                                ${likeButtonText}
+                            </button>
+                            <button class="comment-btn" data-id="${post.id}">💬 ${comments?.length || 0} comments</button>
+                        </div>
+                        <div class="comments-section" id="comments-${post.id}" style="display:none">
+                            <div id="comments-list-${post.id}">
+                                ${comments?.map(c => `<div class="comment"><strong>${escapeHtml(c.user_name)}</strong>: ${escapeHtml(c.text)}</div>`).join('') || '<div class="comment">No comments yet</div>'}
+                            </div>
+                            <div class="comment-input">
+                                <input type="text" id="comment-input-${post.id}" placeholder="Write a comment...">
+                                <button class="submit-comment" data-id="${post.id}">Post</button>
+                            </div>
+                        </div>
                     </div>
                 `;
             }
             feedDiv.innerHTML = html;
             
-            // Attach like button events
+            // Like button events (One like per user)
             document.querySelectorAll('.like-btn').forEach(btn => {
                 btn.onclick = async function() {
-                    const id = this.getAttribute('data-id');
-                    const post = posts.find(p => String(p.id) === id);
-                    const newLikes = (post?.likes || 0) + 1;
-                    await supabase.from('posts').update({ likes: newLikes }).eq('id', id);
+                    const postId = parseInt(this.getAttribute('data-id'));
+                    const hasLiked = this.getAttribute('data-has-liked') === 'true';
+                    
+                    if (hasLiked) {
+                        // Unlike: remove from post_likes and decrement count
+                        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
+                        const post = posts.find(p => p.id === postId);
+                        await supabase.from('posts').update({ likes: (post?.likes || 0) - 1 }).eq('id', postId);
+                    } else {
+                        // Like: add to post_likes and increment count
+                        await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
+                        const post = posts.find(p => p.id === postId);
+                        await supabase.from('posts').update({ likes: (post?.likes || 0) + 1 }).eq('id', postId);
+                    }
+                    loadFeed();
+                };
+            });
+            
+            // Comment toggle buttons
+            document.querySelectorAll('.comment-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const id = btn.getAttribute('data-id');
+                    const section = document.getElementById(`comments-${id}`);
+                    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+                };
+            });
+            
+            // Submit comment buttons
+            document.querySelectorAll('.submit-comment').forEach(btn => {
+                btn.onclick = async () => {
+                    const postId = btn.getAttribute('data-id');
+                    const input = document.getElementById(`comment-input-${postId}`);
+                    const text = input.value.trim();
+                    if (!text || !currentUser) return;
+                    
+                    await supabase.from('comments').insert({
+                        post_id: parseInt(postId),
+                        user_id: currentUser.id,
+                        user_name: currentUser.email.split('@')[0],
+                        text: text
+                    });
+                    input.value = '';
                     loadFeed();
                 };
             });
@@ -762,6 +888,7 @@
             for (const post of posts) {
                 html += `
                     <div class="post-card">
+                        <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
                         <video controls autoplay muted loop src="${post.video_url}"></video>
                         <div style="margin-top: 10px;"><strong>${escapeHtml(post.user_name)}</strong>: ${escapeHtml(post.text || '')} ❤️ ${post.likes || 0}</div>
                     </div>
@@ -779,6 +906,9 @@
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
                     loadFeed();
                     loadVideos();
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
+                    loadFeed();
                 })
                 .subscribe();
             
