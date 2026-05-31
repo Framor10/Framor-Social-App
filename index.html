@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>FRAMOR</title>
+    <title>FRAMOR — Connect Differently</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,500;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -13,13 +15,17 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #0A0A0F;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(circle at 20% 30%, #0B0518, #02010A);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             color: #FFFFFF;
         }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #1A1A2E; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #FF2E63, #FFB347); border-radius: 10px; }
 
         #loginScreen {
             display: flex;
@@ -29,92 +35,130 @@
             min-height: 100vh;
             text-align: center;
             padding: 30px;
-            background: linear-gradient(135deg, #1A0033 0%, #330066 50%, #6600CC 100%);
+            background: radial-gradient(ellipse at 30% 40%, #12002b, #000000);
             width: 100%;
             max-width: 500px;
         }
 
         #loginScreen h1 {
-            font-size: 4rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #FF0066, #FFCC00);
+            font-size: 4.8rem;
+            font-weight: 900;
+            background: linear-gradient(125deg, #FF2E63, #FFB347, #FF2E63);
+            background-size: 200% auto;
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            margin-bottom: 10px;
+            animation: shimmer 3s linear infinite;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        #loginScreen p {
+            font-weight: 500;
+            color: rgba(255,255,240,0.7);
+            margin-bottom: 15px;
         }
 
         #loginForm {
             width: 100%;
-            max-width: 300px;
-            margin-top: 30px;
+            max-width: 340px;
+            margin-top: 25px;
+            background: rgba(12, 10, 28, 0.7);
+            backdrop-filter: blur(18px);
+            border-radius: 56px;
+            padding: 32px 24px;
+            border: 1px solid rgba(255, 100, 150, 0.3);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 46, 99, 0.2);
         }
 
         #loginForm input {
             width: 100%;
-            padding: 12px;
+            padding: 14px 18px;
             margin: 8px 0;
-            border-radius: 30px;
-            border: none;
-            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0, 0, 0, 0.5);
             color: white;
-            font-size: 16px;
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+
+        #loginForm input:focus {
+            outline: none;
+            border-color: #FF2E63;
+            box-shadow: 0 0 12px rgba(255, 46, 99, 0.4);
+            background: rgba(0, 0, 0, 0.7);
         }
 
         #loginForm input::placeholder {
-            color: rgba(255,255,255,0.6);
+            color: rgba(255,255,200,0.6);
         }
 
         #loginForm button {
             width: 100%;
             padding: 12px;
-            margin-top: 16px;
-            border-radius: 30px;
+            margin-top: 14px;
+            border-radius: 60px;
             border: none;
-            background: linear-gradient(135deg, #FF0066, #FF6600);
+            background: linear-gradient(95deg, #FF2E63, #FF8C42);
             color: white;
-            font-weight: bold;
+            font-weight: 800;
             cursor: pointer;
             font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 6px 14px rgba(255, 46, 99, 0.4);
+        }
+
+        #loginForm button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 22px rgba(255, 46, 99, 0.6);
         }
 
         #googleBtn {
             background: white !important;
-            color: #6600CC !important;
+            color: #1E0A3C !important;
         }
 
-        /* Signup form additional fields */
         .signup-fields {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
+            transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .signup-fields.show {
-            max-height: 300px;
+            max-height: 340px;
         }
 
         #mainApp {
             display: none;
             flex-direction: column;
             width: 100%;
-            max-width: 500px;
+            max-width: 550px;
             min-height: 100vh;
-            background: #0A0A0F;
+            background: #03010C;
         }
 
         .framor-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
-            background: #0A0A0F;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 22px;
+            background: rgba(5, 3, 18, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 120, 160, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 12;
         }
 
         .logo {
-            font-size: 1.8rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #FF0066, #FFCC00);
+            font-size: 1.9rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FF2E63, #FFB347);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -122,376 +166,394 @@
 
         .nav-bar {
             display: flex;
-            background: #0A0A0F;
-            padding: 8px 16px;
-            gap: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: #0F0C1C;
+            padding: 10px 16px;
+            gap: 6px;
+            border-bottom: 1px solid rgba(255, 70, 110, 0.2);
         }
 
         .nav-item {
             flex: 1;
             background: transparent;
             border: none;
-            padding: 10px;
-            border-radius: 30px;
-            color: #888;
-            font-weight: 600;
+            padding: 10px 6px;
+            border-radius: 50px;
+            color: #aaa;
+            font-weight: 700;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
         }
 
+        .nav-item i { font-size: 15px; }
+
         .nav-item.active {
-            background: linear-gradient(135deg, #FF0066, #FF6600);
+            background: linear-gradient(115deg, #FF2E63, #FF8C42);
             color: white;
+            box-shadow: 0 4px 12px rgba(255, 46, 99, 0.5);
         }
 
         .panel {
             display: none;
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
-            padding-bottom: 80px;
+            padding: 20px 16px;
+            padding-bottom: 90px;
         }
 
         .panel.active {
             display: block;
+            animation: fadeSlideUp 0.25s ease-out;
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .post-card, .message-bubble, .friend-card, .profile-card {
-            background: #1A1A24;
-            border-radius: 20px;
-            padding: 16px;
+            background: rgba(18, 16, 32, 0.85);
+            backdrop-filter: blur(4px);
+            border-radius: 28px;
+            padding: 18px;
             margin-bottom: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 100, 130, 0.25);
+            transition: all 0.2s;
+        }
+
+        .post-card:hover {
+            border-color: #FF5E7E;
+            background: rgba(30, 24, 52, 0.9);
+            transform: translateY(-2px);
         }
 
         .post-user {
-            color: #FF6600;
-            font-weight: bold;
-            margin-bottom: 8px;
+            color: #FFB85E;
+            font-weight: 800;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .post-stats {
             display: flex;
-            gap: 16px;
-            margin-top: 8px;
+            gap: 20px;
+            margin-top: 12px;
         }
 
         .like-btn, .comment-btn {
-            background: none;
+            background: rgba(255,255,245,0.08);
             border: none;
-            color: #FF0066;
+            color: #FFB347;
             cursor: pointer;
-            font-size: 14px;
-            padding: 5px 10px;
+            font-size: 13px;
+            padding: 6px 18px;
+            border-radius: 50px;
+            transition: 0.2s;
+            font-weight: 600;
         }
 
-        .comment-btn {
-            color: #FFCC00;
+        .like-btn.liked {
+            background: #FF2E63;
+            color: white;
+            box-shadow: 0 0 8px #FF2E63;
+        }
+
+        .comment-btn { color: #FFE0A3; }
+
+        .like-btn:hover, .comment-btn:hover {
+            background: rgba(255, 90, 100, 0.3);
         }
 
         .comments-section {
-            margin-top: 12px;
+            margin-top: 14px;
             padding-top: 12px;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(255,255,150,0.15);
         }
 
         .comment {
             padding: 8px 0;
             font-size: 13px;
-            color: #aaa;
+            color: #cfcfdf;
         }
 
-        .comment strong {
-            color: #FF6600;
-        }
+        .comment strong { color: #FFA559; }
 
         .comment-input {
             display: flex;
-            gap: 8px;
-            margin-top: 8px;
+            gap: 10px;
+            margin-top: 12px;
         }
 
         .comment-input input {
             flex: 1;
-            background: #0A0A0F;
-            border: 1px solid #333;
-            padding: 8px;
-            border-radius: 20px;
+            background: #0A081C;
+            border: 1px solid #3a2c4a;
+            padding: 10px;
+            border-radius: 40px;
             color: white;
-            font-size: 13px;
         }
 
         .comment-input button {
-            background: linear-gradient(135deg, #FF0066, #FF6600);
+            background: linear-gradient(95deg, #FF2E63, #FF8C42);
             border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 10px 20px;
+            border-radius: 40px;
             color: white;
             cursor: pointer;
+            font-weight: bold;
         }
 
         .chat-input-container {
             display: flex;
-            gap: 10px;
-            padding: 16px;
-            background: #1A1A24;
-            border-radius: 30px;
+            gap: 12px;
+            padding: 14px;
+            background: #141126;
+            border-radius: 60px;
             margin-top: 12px;
             position: sticky;
-            bottom: 0;
+            bottom: 12px;
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 100, 130, 0.4);
         }
 
         .chat-input-container input {
             flex: 1;
-            background: #0A0A0F;
-            border: 1px solid #333;
+            background: #0A081C;
+            border: 1px solid #3a2c4a;
             padding: 12px;
-            border-radius: 30px;
+            border-radius: 50px;
             color: white;
         }
 
         .chat-input-container button {
-            background: linear-gradient(135deg, #FF0066, #FF6600);
+            background: linear-gradient(95deg, #FF2E63, #FF8C42);
             border: none;
             padding: 12px 24px;
-            border-radius: 30px;
+            border-radius: 50px;
             color: white;
             font-weight: bold;
             cursor: pointer;
         }
 
         .create-post {
-            background: #1A1A24;
-            border-radius: 20px;
-            padding: 16px;
-            margin-bottom: 20px;
+            background: rgba(20, 18, 38, 0.95);
+            border-radius: 32px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 90, 120, 0.3);
         }
 
         .create-post textarea, .create-post input {
             width: 100%;
-            background: #0A0A0F;
-            border: 1px solid #333;
-            padding: 12px;
-            border-radius: 16px;
+            background: #05040E;
+            border: 1px solid #3E2C5A;
+            padding: 14px;
+            border-radius: 28px;
             color: white;
             margin-bottom: 12px;
             font-family: inherit;
         }
 
         .create-post button {
-            background: linear-gradient(135deg, #FF0066, #FF6600);
+            background: linear-gradient(95deg, #FF2E63, #FF8C42);
             border: none;
-            padding: 12px;
-            border-radius: 30px;
-            color: white;
-            font-weight: bold;
+            padding: 14px;
+            border-radius: 60px;
+            font-weight: 800;
             width: 100%;
             cursor: pointer;
+            color: white;
+            font-size: 15px;
         }
 
         .logout-btn, .edit-profile-btn {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,240,0.12);
             border: none;
-            padding: 8px 16px;
-            border-radius: 30px;
+            padding: 8px 20px;
+            border-radius: 60px;
             color: white;
             cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
         }
 
         .edit-profile-btn {
-            background: linear-gradient(135deg, #FF0066, #FF6600);
-            margin-top: 16px;
-        }
-
-        video, .post-image, .profile-avatar {
-            width: 100%;
-            border-radius: 16px;
-            margin-top: 8px;
-        }
-
-        .post-image {
-            max-height: 400px;
-            object-fit: cover;
+            background: linear-gradient(95deg, #FF2E63, #FF8C42);
+            margin-top: 12px;
         }
 
         .profile-avatar {
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            object-fit: cover;
+            background: linear-gradient(145deg, #FF2E63, #FFB347);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin: 0 auto 16px;
-            display: block;
-        }
-
-        .profile-info {
-            text-align: center;
-        }
-
-        .profile-info h3 {
-            margin-bottom: 8px;
-        }
-
-        .profile-info p {
-            color: #aaa;
-            margin-bottom: 8px;
+            font-size: 44px;
         }
 
         .profile-stats {
             display: flex;
             justify-content: space-around;
-            margin: 16px 0;
+            margin: 20px 0;
             padding: 16px 0;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .stat {
-            text-align: center;
+            border-top: 1px solid rgba(255,200,100,0.2);
+            border-bottom: 1px solid rgba(255,200,100,0.2);
         }
 
         .stat-value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #FF6600;
+            font-size: 26px;
+            font-weight: 900;
+            color: #FFA05E;
         }
 
-        .stat-label {
-            font-size: 12px;
-            color: #888;
+        .stat-label { font-size: 12px; color: #aaa; }
+
+        .search-box {
+            background: #100E24;
+            border-radius: 60px;
+            padding: 14px 20px;
+            border: 1px solid #4a3a6a;
+            width: 100%;
+            color: white;
+            margin-bottom: 20px;
         }
 
-        .message {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 10px;
-            text-align: center;
+        .accept-btn { background: #00E6A0; color: #0a0a0a; font-weight: bold; }
+        .reject-btn { background: #FF3B6F; color: white; }
+        .add-friend-btn { background: linear-gradient(95deg, #FF2E63, #FF8C42); color: white; font-weight: bold; }
+
+        .friend-actions button {
+            padding: 6px 16px;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            margin-right: 8px;
         }
 
-        .error {
-            background: rgba(255, 0, 102, 0.2);
-            color: #FF0066;
+        .selected-chat {
+            background: rgba(255, 90, 70, 0.4);
+            border-left: 5px solid #FF5E6E;
         }
 
-        .success {
-            background: rgba(0, 255, 102, 0.2);
-            color: #00FF66;
+        .message-bubble {
+            max-width: 85%;
+            margin: 8px 0;
+        }
+
+        video, .post-image {
+            width: 100%;
+            border-radius: 24px;
+            margin-top: 10px;
+            max-height: 380px;
+            object-fit: cover;
+        }
+
+        .profile-input {
+            background: #0C0A20;
+            border: 1px solid #6a4a9e;
+            border-radius: 40px;
+            padding: 12px 18px;
+            color: white;
+            width: 100%;
+            margin-bottom: 12px;
         }
 
         .loading {
             text-align: center;
             padding: 40px;
+            color: #ccaaff;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
             color: #888;
-        }
-
-        .search-box, .profile-input {
-            width: 100%;
-            padding: 12px;
-            background: #1A1A24;
-            border: 1px solid #333;
-            border-radius: 30px;
-            color: white;
-            margin-bottom: 16px;
-        }
-
-        .profile-input {
-            margin-bottom: 12px;
-        }
-
-        .friend-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .accept-btn, .reject-btn, .add-friend-btn {
-            padding: 6px 12px;
-            border-radius: 20px;
-            border: none;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .accept-btn {
-            background: #00FF66;
-            color: black;
-        }
-
-        .reject-btn {
-            background: #FF0066;
-            color: white;
-        }
-
-        .add-friend-btn {
-            background: linear-gradient(135deg, #FF0066, #FF6600);
-            color: white;
+            background: rgba(18, 16, 32, 0.5);
+            border-radius: 32px;
         }
 
         h3 {
-            margin: 20px 0 10px;
-            font-size: 16px;
+            margin: 18px 0 12px;
+            font-size: 18px;
+            background: linear-gradient(125deg, #FFCF9A, #FFA07A);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
         }
 
         .chat-friend-item {
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
         .chat-friend-item:hover {
-            background: rgba(255, 102, 0, 0.2);
+            background: rgba(255, 110, 80, 0.3);
+            transform: translateX(5px);
         }
 
-        .selected-chat {
-            background: rgba(255, 102, 0, 0.3);
-            border: 1px solid #FF6600;
-        }
+        i, .fas, .far { margin-right: 6px; }
 
-        .liked {
-            color: #FF0066;
-            opacity: 0.7;
+        .message { 
+            padding: 12px; 
+            border-radius: 60px; 
+            margin: 10px 0; 
+            text-align: center;
         }
+        .error { background: rgba(255, 46, 99, 0.2); color: #FF6B8A; }
+        .success { background: rgba(0, 230, 160, 0.2); color: #00E6A0; }
     </style>
 </head>
 <body>
 <div id="loginScreen">
-    <h1>FRAMOR</h1>
-    <p>Connect differently ✨</p>
+    <h1><i class="fas fa-crown"></i> FRAMOR</h1>
+    <p>where energy meets expression ✨</p>
     <div id="loginForm">
-        <!-- Signup Fields (hidden initially, shown when Create Account is clicked) -->
         <div id="signupFields" class="signup-fields">
             <input type="text" id="firstName" placeholder="First Name *">
             <input type="text" id="lastName" placeholder="Last Name *">
-            <input type="date" id="dob" placeholder="Date of Birth">
+            <input type="date" id="dob">
         </div>
-        <input type="email" id="email" placeholder="Email *">
+        <input type="email" id="email" placeholder="Email address *">
         <input type="password" id="password" placeholder="Password *">
-        <button id="signupBtn">Create Account</button>
-        <button id="loginBtn">Sign In</button>
-        <button id="googleBtn">🚀 Sign in with Google</button>
+        <button id="signupBtn"><i class="fas fa-user-plus"></i> Create Account</button>
+        <button id="loginBtn"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+        <button id="googleBtn"><i class="fab fa-google"></i> Continue with Google</button>
     </div>
     <div id="loginMessage"></div>
 </div>
 
 <div id="mainApp">
     <div class="framor-header">
-        <div class="logo">FRAMOR</div>
-        <button class="logout-btn" id="logoutBtn">Exit</button>
+        <div class="logo"><i class="fas fa-crown"></i> FRAMOR</div>
+        <button class="logout-btn" id="logoutBtn"><i class="fas fa-door-open"></i> Exit</button>
     </div>
 
     <div class="nav-bar">
-        <button class="nav-item active" data-panel="feed">📱 Feed</button>
-        <button class="nav-item" data-panel="videos">🎵 Reels</button>
-        <button class="nav-item" data-panel="friends">👥 Friends</button>
-        <button class="nav-item" data-panel="profile">👤 Profile</button>
-        <button class="nav-item" data-panel="chat">💬 Chat</button>
+        <button class="nav-item active" data-panel="feed"><i class="fas fa-rss"></i> Feed</button>
+        <button class="nav-item" data-panel="videos"><i class="fas fa-video"></i> Reels</button>
+        <button class="nav-item" data-panel="friends"><i class="fas fa-users"></i> Friends</button>
+        <button class="nav-item" data-panel="profile"><i class="fas fa-user"></i> Profile</button>
+        <button class="nav-item" data-panel="chat"><i class="fas fa-comment"></i> Chat</button>
     </div>
 
     <div id="feedPanel" class="panel active">
         <div class="create-post">
             <textarea id="postText" placeholder="What's on your mind? 🔥" rows="2"></textarea>
-            <input type="file" id="postImage" accept="image/*" placeholder="📸 Image">
-            <input type="file" id="postVideo" accept="video/*" placeholder="🎥 Video">
-            <button id="createPostBtn">✨ Post to FRAMOR</button>
+            <input type="file" id="postImage" accept="image/*">
+            <input type="file" id="postVideo" accept="video/*">
+            <button id="createPostBtn"><i class="fas fa-feather-alt"></i> Post to FRAMOR</button>
         </div>
         <div id="feedList"></div>
     </div>
@@ -503,9 +565,9 @@
     <div id="friendsPanel" class="panel">
         <input type="text" id="searchUsers" class="search-box" placeholder="🔍 Search users to add...">
         <div id="searchResults"></div>
-        <h3>👥 My Friends</h3>
+        <h3><i class="fas fa-user-friends"></i> My Friends</h3>
         <div id="friendsList"></div>
-        <h3>📨 Friend Requests</h3>
+        <h3><i class="fas fa-envelope"></i> Friend Requests</h3>
         <div id="friendRequests"></div>
     </div>
 
@@ -514,20 +576,20 @@
             <div class="profile-card" id="profileDisplay">
                 <div class="profile-info">
                     <div class="profile-stats" id="profileStats"></div>
-                    <button class="edit-profile-btn" id="editProfileBtn">✏️ Edit Profile</button>
+                    <button class="edit-profile-btn" id="editProfileBtn"><i class="fas fa-edit"></i> Edit Profile</button>
                 </div>
             </div>
         </div>
         <div id="profileEdit" style="display:none;">
             <div class="profile-card">
-                <h3>Edit Profile</h3>
+                <h3><i class="fas fa-sparkles"></i> Edit Profile</h3>
                 <input type="text" id="editFirstName" class="profile-input" placeholder="First Name">
                 <input type="text" id="editLastName" class="profile-input" placeholder="Last Name">
-                <input type="date" id="editDob" class="profile-input" placeholder="Date of Birth">
+                <input type="date" id="editDob" class="profile-input">
                 <input type="text" id="editLocation" class="profile-input" placeholder="Location">
-                <input type="text" id="editBio" class="profile-input" rows="3" placeholder="Bio">
+                <input type="text" id="editBio" class="profile-input" placeholder="Bio">
                 <input type="text" id="editWebsite" class="profile-input" placeholder="Website">
-                <button id="saveProfileBtn" class="edit-profile-btn">💾 Save Changes</button>
+                <button id="saveProfileBtn" class="edit-profile-btn"><i class="fas fa-save"></i> Save Changes</button>
                 <button id="cancelEditBtn" class="logout-btn" style="margin-top: 8px;">Cancel</button>
             </div>
         </div>
@@ -539,174 +601,79 @@
         <div id="chatMessages" style="max-height: 50vh; overflow-y: auto; margin-top: 16px;"></div>
         <div class="chat-input-container">
             <input type="text" id="chatInput" placeholder="Select a friend to chat..." disabled>
-            <button id="sendChatBtn" disabled>Send</button>
+            <button id="sendChatBtn" disabled><i class="fas fa-paper-plane"></i> Send</button>
         </div>
     </div>
 </div>
 
 <script>
     (function() {
-        // Supabase configuration
         const SUPABASE_URL = "https://pknztsbadizlcnlzppch.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_Qvi0piL5vNk-734kukD5GA_WtC6nSvb";
-        
-        // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Global variables
         let currentUser = null;
         let realtimeChannels = [];
         let selectedChatFriend = null;
-        let userProfile = null;
         
-        // DOM elements
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         const loginMessage = document.getElementById('loginMessage');
         const signupFields = document.getElementById('signupFields');
         let isSignupMode = false;
         
-        // Toggle signup fields
-        document.getElementById('signupBtn').addEventListener('click', () => {
-            isSignupMode = true;
-            signupFields.classList.add('show');
-        });
+        document.getElementById('signupBtn').addEventListener('click', () => { isSignupMode = true; signupFields.classList.add('show'); });
+        document.getElementById('loginBtn').addEventListener('click', () => { isSignupMode = false; signupFields.classList.remove('show'); });
         
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            isSignupMode = false;
-            signupFields.classList.remove('show');
-        });
-        
-        // Helper function to show messages
         function showMessage(element, text, type) {
             if (!element) return;
             element.innerHTML = `<div class="message ${type}">${text}</div>`;
-            setTimeout(() => {
-                if (element.innerHTML === `<div class="message ${type}">${text}</div>`) {
-                    element.innerHTML = '';
-                }
-            }, 3000);
+            setTimeout(() => { if (element.innerHTML.includes(text)) element.innerHTML = ''; }, 3500);
         }
         
-        // Escape HTML to prevent XSS
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+        function getUserDisplayName(profile, email) { if(profile?.first_name && profile?.last_name) return `${profile.first_name} ${profile.last_name}`; return email.split('@')[0]; }
         
-        // Get user's full name for display
-        function getUserDisplayName(profile, email) {
-            if (profile?.first_name && profile?.last_name) {
-                return `${profile.first_name} ${profile.last_name}`;
-            }
-            if (profile?.display_name) {
-                return profile.display_name;
-            }
-            return email.split('@')[0];
-        }
-        
-        // ============ PROFILE FUNCTIONS ============
         async function loadProfile() {
             if (!currentUser) return;
-            
-            // Get or create user profile
-            let { data: profile } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('id', currentUser.id)
-                .single();
-            
+            let { data: profile } = await supabase.from('user_profiles').select('*').eq('id', currentUser.id).single();
             if (!profile) {
-                // Create profile if doesn't exist
-                const { data: newProfile } = await supabase
-                    .from('user_profiles')
-                    .insert({
-                        id: currentUser.id,
-                        display_name: currentUser.email.split('@')[0],
-                        email: currentUser.email
-                    })
-                    .select()
-                    .single();
-                profile = newProfile;
+                const { data: np } = await supabase.from('user_profiles').insert({ id: currentUser.id, display_name: currentUser.email.split('@')[0], email: currentUser.email }).select().single();
+                profile = np;
             }
-            
-            userProfile = profile;
-            
-            // Get user's posts count
-            const { count: postsCount } = await supabase
-                .from('posts')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', currentUser.id);
-            
-            // Get friends count
-            const { data: friendships } = await supabase
-                .from('friends')
-                .select('*')
-                .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
-                .eq('status', 'accepted');
-            
+            const { count: postsCount } = await supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+            const { data: friendships } = await supabase.from('friends').select('*').or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`).eq('status', 'accepted');
             const friendsCount = friendships?.length || 0;
-            
-            // Display profile
             const fullName = getUserDisplayName(profile, currentUser.email);
-            const firstName = profile?.first_name || '';
-            const lastName = profile?.last_name || '';
-            const bio = profile?.bio || 'No bio yet';
-            const location = profile?.location || 'No location set';
-            const website = profile?.website || 'No website';
-            const dob = profile?.date_of_birth || 'Not set';
             
             document.getElementById('profileDisplay').innerHTML = `
                 <div class="profile-info">
+                    <div class="profile-avatar"><i class="fas fa-user-astronaut"></i></div>
                     <h3>${escapeHtml(fullName)}</h3>
-                    <p>📧 ${escapeHtml(currentUser.email)}</p>
-                    <p>📝 ${escapeHtml(bio)}</p>
-                    <p>📍 ${escapeHtml(location)}</p>
-                    <p>🎂 ${escapeHtml(dob)}</p>
-                    <p>🔗 ${escapeHtml(website)}</p>
+                    <p><i class="fas fa-envelope"></i> ${escapeHtml(currentUser.email)}</p>
+                    <p><i class="fas fa-quote-left"></i> ${escapeHtml(profile?.bio || 'No bio yet')}</p>
+                    <p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(profile?.location || 'Earth')}</p>
                     <div class="profile-stats">
-                        <div class="stat">
-                            <div class="stat-value">${postsCount || 0}</div>
-                            <div class="stat-label">Posts</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${friendsCount}</div>
-                            <div class="stat-label">Friends</div>
-                        </div>
+                        <div class="stat"><div class="stat-value">${postsCount || 0}</div><div class="stat-label">Posts</div></div>
+                        <div class="stat"><div class="stat-value">${friendsCount}</div><div class="stat-label">Friends</div></div>
                     </div>
-                </div>
-            `;
+                </div>`;
             
-            // Load user's own posts
-            const { data: myPosts } = await supabase
-                .from('posts')
-                .select('*')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: false });
-            
+            const { data: myPosts } = await supabase.from('posts').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
             const myPostsDiv = document.getElementById('myPostsList');
-            if (myPosts && myPosts.length > 0) {
-                myPostsDiv.innerHTML = '<h3>📝 My Posts</h3>' + myPosts.map(post => `
+            if(myPosts && myPosts.length > 0) {
+                myPostsDiv.innerHTML = '<h3><i class="fas fa-pen-fancy"></i> My Posts</h3>' + myPosts.map(p => `
                     <div class="post-card">
-                        <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
-                        <div>${escapeHtml(post.text || '')}</div>
-                        ${post.image_url ? `<img src="${post.image_url}" class="post-image">` : ''}
-                        ${post.video_url ? `<video controls src="${post.video_url}"></video>` : ''}
-                        <div class="post-stats">
-                            <span>❤️ ${post.likes || 0} likes</span>
-                        </div>
-                    </div>
-                `).join('');
+                        <div class="post-user"><i class="fas fa-user"></i> ${escapeHtml(p.user_name)}</div>
+                        <div>${escapeHtml(p.text || '')}</div>
+                        ${p.image_url ? `<img src="${p.image_url}" class="post-image">` : ''}
+                        ${p.video_url ? `<video controls src="${p.video_url}"></video>` : ''}
+                        <div class="post-stats"><span>❤️ ${p.likes || 0} likes</span></div>
+                    </div>`).join('');
             } else {
-                myPostsDiv.innerHTML = '<h3>📝 My Posts</h3><div class="loading">No posts yet. Create your first post!</div>';
+                myPostsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-feather-alt"></i> No posts yet. Create your first post!</div>';
             }
             
-            // Set edit form values
             document.getElementById('editFirstName').value = profile?.first_name || '';
             document.getElementById('editLastName').value = profile?.last_name || '';
             document.getElementById('editDob').value = profile?.date_of_birth || '';
@@ -715,366 +682,56 @@
             document.getElementById('editWebsite').value = profile?.website || '';
         }
         
-        // Edit profile
-        document.getElementById('editProfileBtn')?.addEventListener('click', () => {
-            document.getElementById('profileDisplay').style.display = 'none';
-            document.getElementById('profileEdit').style.display = 'block';
-        });
-        
-        document.getElementById('cancelEditBtn')?.addEventListener('click', () => {
-            document.getElementById('profileDisplay').style.display = 'block';
-            document.getElementById('profileEdit').style.display = 'none';
-        });
-        
+        document.getElementById('editProfileBtn')?.addEventListener('click', () => { document.getElementById('profileDisplay').style.display = 'none'; document.getElementById('profileEdit').style.display = 'block'; });
+        document.getElementById('cancelEditBtn')?.addEventListener('click', () => { document.getElementById('profileDisplay').style.display = 'block'; document.getElementById('profileEdit').style.display = 'none'; });
         document.getElementById('saveProfileBtn')?.addEventListener('click', async () => {
-            const firstName = document.getElementById('editFirstName').value;
-            const lastName = document.getElementById('editLastName').value;
-            const dob = document.getElementById('editDob').value;
-            const location = document.getElementById('editLocation').value;
-            const bio = document.getElementById('editBio').value;
-            const website = document.getElementById('editWebsite').value;
-            const fullName = firstName && lastName ? `${firstName} ${lastName}` : currentUser.email.split('@')[0];
-            
-            const { error } = await supabase
-                .from('user_profiles')
-                .update({
-                    first_name: firstName,
-                    last_name: lastName,
-                    date_of_birth: dob,
-                    location: location,
-                    display_name: fullName,
-                    bio: bio,
-                    website: website,
-                    updated_at: new Date()
-                })
-                .eq('id', currentUser.id);
-            
-            if (error) {
-                alert('Error updating profile: ' + error.message);
-            } else {
-                alert('Profile updated successfully!');
-                document.getElementById('profileDisplay').style.display = 'block';
-                document.getElementById('profileEdit').style.display = 'none';
-                await loadProfile();
-                // Also update the user_name in posts
-                await supabase
-                    .from('posts')
-                    .update({ user_name: fullName })
-                    .eq('user_id', currentUser.id);
-                await loadFeed();
-                await loadVideos();
-            }
+            const fn = document.getElementById('editFirstName').value, ln = document.getElementById('editLastName').value;
+            const full = (fn && ln) ? `${fn} ${ln}` : currentUser.email.split('@')[0];
+            await supabase.from('user_profiles').update({ 
+                first_name: fn, last_name: ln, date_of_birth: document.getElementById('editDob').value, 
+                location: document.getElementById('editLocation').value, bio: document.getElementById('editBio').value, 
+                website: document.getElementById('editWebsite').value, display_name: full 
+            }).eq('id', currentUser.id);
+            await supabase.from('posts').update({ user_name: full }).eq('user_id', currentUser.id);
+            await loadProfile(); await loadFeed(); await loadVideos();
+            document.getElementById('profileDisplay').style.display = 'block'; document.getElementById('profileEdit').style.display = 'none';
+            showMessage(loginMessage, 'Profile updated!', 'success');
         });
         
-        // ============ FRIENDS FUNCTIONS ============
-        async function loadFriends() {
-            if (!currentUser) return;
-            
-            // Get accepted friends
-            const { data: friendships } = await supabase
-                .from('friends')
-                .select('*')
-                .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
-                .eq('status', 'accepted');
-            
-            const friendIds = friendships?.map(f => f.user_id === currentUser.id ? f.friend_id : f.user_id) || [];
-            
-            if (friendIds.length > 0) {
-                const { data: friends } = await supabase
-                    .from('users')
-                    .select('id, email')
-                    .in('id', friendIds);
-                
-                document.getElementById('friendsList').innerHTML = friends?.map(f => `
-                    <div class="friend-card">👤 ${escapeHtml(f.email.split('@')[0])}</div>
-                `).join('') || '<div class="loading">No friends yet</div>';
-            } else {
-                document.getElementById('friendsList').innerHTML = '<div class="loading">No friends yet. Search above!</div>';
-            }
-            
-            // Get pending friend requests
-            const { data: requests } = await supabase
-                .from('friends')
-                .select('*')
-                .eq('friend_id', currentUser.id)
-                .eq('status', 'pending');
-            
-            if (requests && requests.length > 0) {
-                const requesterIds = requests.map(r => r.user_id);
-                const { data: requesters } = await supabase
-                    .from('users')
-                    .select('id, email')
-                    .in('id', requesterIds);
-                
-                document.getElementById('friendRequests').innerHTML = requesters?.map(r => `
-                    <div class="friend-card">
-                        👤 ${escapeHtml(r.email.split('@')[0])}
-                        <div class="friend-actions">
-                            <button class="accept-btn" onclick="acceptFriend('${r.id}')">Accept</button>
-                            <button class="reject-btn" onclick="rejectFriend('${r.id}')">Reject</button>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                document.getElementById('friendRequests').innerHTML = '<div class="loading">No pending requests</div>';
-            }
-        }
-        
-        // Accept friend request
-        window.acceptFriend = async (requesterId) => {
-            const { error } = await supabase
-                .from('friends')
-                .update({ status: 'accepted' })
-                .eq('user_id', requesterId)
-                .eq('friend_id', currentUser.id);
-            
-            if (error) {
-                alert('Error accepting friend: ' + error.message);
-            } else {
-                alert('Friend accepted!');
-                await loadFriends();
-                await loadChatFriends();
-                await loadProfile();
-            }
-        };
-        
-        // Reject friend request
-        window.rejectFriend = async (requesterId) => {
-            const { error } = await supabase
-                .from('friends')
-                .delete()
-                .eq('user_id', requesterId)
-                .eq('friend_id', currentUser.id);
-            
-            if (error) {
-                alert('Error rejecting friend: ' + error.message);
-            } else {
-                alert('Friend request rejected');
-                await loadFriends();
-            }
-        };
-        
-        // Send friend request
-        window.sendFriendRequest = async (friendId) => {
-            const { error } = await supabase
-                .from('friends')
-                .insert({
-                    user_id: currentUser.id,
-                    friend_id: friendId,
-                    status: 'pending'
-                });
-            
-            if (error) {
-                alert('Error: ' + error.message);
-            } else {
-                alert('Friend request sent!');
-                document.getElementById('searchResults').innerHTML = '';
-                document.getElementById('searchUsers').value = '';
-            }
-        };
-        
-        // Search users
-        let searchTimeout;
-        document.getElementById('searchUsers')?.addEventListener('input', async (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(async () => {
-                const searchTerm = e.target.value.toLowerCase();
-                if (searchTerm.length < 2) {
-                    document.getElementById('searchResults').innerHTML = '';
-                    return;
-                }
-                
-                const { data: users, error } = await supabase
-                    .from('users')
-                    .select('id, email')
-                    .ilike('email', `%${searchTerm}%`)
-                    .neq('id', currentUser.id)
-                    .limit(5);
-                
-                if (error) {
-                    console.error("Search error:", error);
-                    document.getElementById('searchResults').innerHTML = '<div class="loading">Error searching</div>';
-                    return;
-                }
-                
-                if (users && users.length > 0) {
-                    document.getElementById('searchResults').innerHTML = users.map(u => `
-                        <div class="friend-card">
-                            👤 ${escapeHtml(u.email.split('@')[0])}
-                            <div class="friend-actions">
-                                <button class="add-friend-btn" onclick="sendFriendRequest('${u.id}')">Add Friend</button>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    document.getElementById('searchResults').innerHTML = '<div class="loading">No users found</div>';
-                }
-            }, 500);
-        });
-        
-        // ============ PRIVATE CHAT FUNCTIONS ============
-        async function loadChatFriends() {
-            if (!currentUser) return;
-            
-            // Get all accepted friends
-            const { data: friendships } = await supabase
-                .from('friends')
-                .select('*')
-                .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
-                .eq('status', 'accepted');
-            
-            const friendIds = friendships?.map(f => f.user_id === currentUser.id ? f.friend_id : f.user_id) || [];
-            
-            if (friendIds.length === 0) {
-                document.getElementById('chatFriendsList').innerHTML = '<div class="loading">👥 Add friends first to start chatting!</div>';
-                return;
-            }
-            
-            const { data: friends } = await supabase
-                .from('users')
-                .select('id, email')
-                .in('id', friendIds);
-            
-            document.getElementById('chatFriendsList').innerHTML = '<h3>Select a friend to chat:</h3>' + friends?.map(f => `
-                <div class="friend-card chat-friend-item" onclick="selectChatFriend('${f.id}', '${escapeHtml(f.email.split('@')[0])}')">
-                    👤 ${escapeHtml(f.email.split('@')[0])}
-                </div>
-            `).join('');
-        }
-        
-        // Select a friend to chat with
-        window.selectChatFriend = async (friendId, friendName) => {
-            selectedChatFriend = { id: friendId, name: friendName };
-            
-            // Highlight selected friend
-            document.querySelectorAll('.chat-friend-item').forEach(el => {
-                el.classList.remove('selected-chat');
-            });
-            const selectedEl = Array.from(document.querySelectorAll('.chat-friend-item')).find(el => 
-                el.getAttribute('onclick')?.includes(friendId)
-            );
-            if (selectedEl) selectedEl.classList.add('selected-chat');
-            
-            // Enable chat input
-            document.getElementById('chatInput').disabled = false;
-            document.getElementById('sendChatBtn').disabled = false;
-            document.getElementById('chatInput').placeholder = `Message @${friendName}...`;
-            
-            // Load private messages
-            const chatDiv = document.getElementById('chatMessages');
-            chatDiv.innerHTML = '<div class="loading">💬 Loading messages...</div>';
-            
-            const { data: messages, error } = await supabase
-                .from('private_messages')
-                .select('*')
-                .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
-                .order('created_at', { ascending: true });
-            
-            if (error) {
-                chatDiv.innerHTML = '<div class="loading">Error loading messages</div>';
-                return;
-            }
-            
-            if (!messages || messages.length === 0) {
-                chatDiv.innerHTML = '<div class="loading">💬 No messages yet. Say hi!</div>';
-                return;
-            }
-            
-            let html = '';
-            for (const msg of messages) {
-                const isMe = msg.sender_id === currentUser.id;
-                html += `
-                    <div class="message-bubble" style="text-align: ${isMe ? 'right' : 'left'}; background: ${isMe ? '#FF006622' : '#1A1A24'};">
-                        <strong>${isMe ? 'Me' : escapeHtml(friendName)}</strong>: ${escapeHtml(msg.text)}
-                    </div>
-                `;
-            }
-            chatDiv.innerHTML = html;
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-        };
-        
-        // Send private message
-        async function sendPrivateMessage() {
-            if (!currentUser || !selectedChatFriend) {
-                alert('Select a friend to chat with first!');
-                return;
-            }
-            
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-            
-            const { error } = await supabase
-                .from('private_messages')
-                .insert({
-                    sender_id: currentUser.id,
-                    receiver_id: selectedChatFriend.id,
-                    text: text
-                });
-            
-            if (error) {
-                alert('Message error: ' + error.message);
-            } else {
-                input.value = '';
-                // Reload messages
-                window.selectChatFriend(selectedChatFriend.id, selectedChatFriend.name);
-            }
-        }
-        
-        // ============ LOAD FEED WITH COMMENTS AND LIKES ============
         async function loadFeed() {
             const feedDiv = document.getElementById('feedList');
-            if (!feedDiv) return;
+            feedDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading feed...</div>';
             
-            feedDiv.innerHTML = '<div class="loading">Loading posts...</div>';
-            
-            const { data: posts, error } = await supabase
-                .from('posts')
-                .select('*')
-                .order('created_at', { ascending: false });
+            const { data: posts, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
             
             if (error) {
-                feedDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+                feedDiv.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i> Error loading posts</div>`;
                 return;
             }
             
             if (!posts || posts.length === 0) {
-                feedDiv.innerHTML = '<div class="loading">✨ No posts yet. Be the first! ✨</div>';
+                feedDiv.innerHTML = '<div class="empty-state"><i class="fas fa-star"></i> No posts yet. Be the first to post! ✨</div>';
                 return;
             }
             
-            // Get user's likes to check which posts they already liked
-            const { data: userLikes } = currentUser ? await supabase
-                .from('post_likes')
-                .select('post_id')
-                .eq('user_id', currentUser.id) : { data: [] };
-            
-            const likedPostIds = new Set(userLikes?.map(l => l.post_id) || []);
+            const { data: userLikes } = currentUser ? await supabase.from('post_likes').select('post_id').eq('user_id', currentUser.id) : { data: [] };
+            const likedSet = new Set(userLikes?.map(l => l.post_id) || []);
             
             let html = '';
-            for (const post of posts) {
-                // Get comments for this post
-                const { data: comments } = await supabase
-                    .from('comments')
-                    .select('*')
-                    .eq('post_id', post.id)
-                    .order('created_at', { ascending: true });
-                
-                const hasLiked = likedPostIds.has(post.id);
-                const likeButtonClass = hasLiked ? 'liked' : '';
-                const likeButtonText = hasLiked ? '❤️ Liked' : `❤️ ${post.likes || 0} likes`;
-                
+            for(const post of posts) {
+                const { data: comments } = await supabase.from('comments').select('*').eq('post_id', post.id).order('created_at');
+                const hasLiked = likedSet.has(post.id);
                 html += `
                     <div class="post-card" id="post-${post.id}">
-                        <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
+                        <div class="post-user"><i class="fas fa-user-astronaut"></i> ${escapeHtml(post.user_name)}</div>
                         <div>${escapeHtml(post.text || '')}</div>
-                        ${post.image_url ? `<img src="${post.image_url}" class="post-image" alt="Post image">` : ''}
+                        ${post.image_url ? `<img src="${post.image_url}" class="post-image" alt="Post">` : ''}
                         ${post.video_url ? `<video controls src="${post.video_url}"></video>` : ''}
                         <div class="post-stats">
-                            <button class="like-btn ${likeButtonClass}" data-id="${post.id}" data-has-liked="${hasLiked}">
-                                ${likeButtonText}
+                            <button class="like-btn ${hasLiked ? 'liked' : ''}" data-id="${post.id}">
+                                ${hasLiked ? '❤️ Liked' : `❤️ ${post.likes || 0} likes`}
                             </button>
-                            <button class="comment-btn" data-id="${post.id}">💬 ${comments?.length || 0} comments</button>
+                            <button class="comment-btn" data-id="${post.id}"><i class="far fa-comment"></i> ${comments?.length || 0} comments</button>
                         </div>
                         <div class="comments-section" id="comments-${post.id}" style="display:none">
                             <div id="comments-list-${post.id}">
@@ -1085,49 +742,41 @@
                                 <button class="submit-comment" data-id="${post.id}">Post</button>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
             feedDiv.innerHTML = html;
             
-            // Like button events (One like per user)
             document.querySelectorAll('.like-btn').forEach(btn => {
                 btn.onclick = async function() {
-                    const postId = parseInt(this.getAttribute('data-id'));
-                    const hasLiked = this.getAttribute('data-has-liked') === 'true';
-                    
-                    if (hasLiked) {
-                        // Unlike: remove from post_likes and decrement count
+                    const postId = parseInt(this.dataset.id);
+                    const hasLiked = this.classList.contains('liked');
+                    if(hasLiked) {
                         await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
-                        const post = posts.find(p => p.id === postId);
-                        await supabase.from('posts').update({ likes: (post?.likes || 0) - 1 }).eq('id', postId);
+                        const p = posts.find(po => po.id === postId);
+                        await supabase.from('posts').update({ likes: (p?.likes || 0) - 1 }).eq('id', postId);
                     } else {
-                        // Like: add to post_likes and increment count
                         await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
-                        const post = posts.find(p => p.id === postId);
-                        await supabase.from('posts').update({ likes: (post?.likes || 0) + 1 }).eq('id', postId);
+                        const p = posts.find(po => po.id === postId);
+                        await supabase.from('posts').update({ likes: (p?.likes || 0) + 1 }).eq('id', postId);
                     }
                     loadFeed();
                 };
             });
             
-            // Comment toggle buttons
             document.querySelectorAll('.comment-btn').forEach(btn => {
                 btn.onclick = () => {
-                    const id = btn.getAttribute('data-id');
+                    const id = btn.dataset.id;
                     const section = document.getElementById(`comments-${id}`);
                     section.style.display = section.style.display === 'none' ? 'block' : 'none';
                 };
             });
             
-            // Submit comment buttons
             document.querySelectorAll('.submit-comment').forEach(btn => {
                 btn.onclick = async () => {
-                    const postId = btn.getAttribute('data-id');
+                    const postId = btn.dataset.id;
                     const input = document.getElementById(`comment-input-${postId}`);
                     const text = input.value.trim();
-                    if (!text || !currentUser) return;
-                    
+                    if(!text || !currentUser) return;
                     await supabase.from('comments').insert({
                         post_id: parseInt(postId),
                         user_id: currentUser.id,
@@ -1140,91 +789,193 @@
             });
         }
         
-        // Load videos/reels
         async function loadVideos() {
             const videoDiv = document.getElementById('videoList');
-            if (!videoDiv) return;
+            const { data: posts, error } = await supabase.from('posts').select('*').not('video_url', 'is', null).order('created_at', { ascending: false });
             
-            videoDiv.innerHTML = '<div class="loading">Loading reels...</div>';
-            
-            const { data: posts, error } = await supabase
-                .from('posts')
-                .select('*')
-                .not('video_url', 'is', null)
-                .order('created_at', { ascending: false });
-            
-            if (error) {
-                videoDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+            if (error || !posts || posts.length === 0) {
+                videoDiv.innerHTML = '<div class="empty-state"><i class="fas fa-film"></i> No reels yet. Upload a video!</div>';
                 return;
             }
             
-            if (!posts || posts.length === 0) {
-                videoDiv.innerHTML = '<div class="loading">🎬 No reels yet. Upload a video!</div>';
+            videoDiv.innerHTML = posts.map(p => `
+                <div class="post-card">
+                    <div class="post-user"><i class="fas fa-user"></i> ${escapeHtml(p.user_name)}</div>
+                    <video controls autoplay muted loop src="${p.video_url}"></video>
+                    <div style="margin-top: 10px;">✨ ${escapeHtml(p.text || '')} ❤️ ${p.likes || 0}</div>
+                </div>`).join('');
+        }
+        
+        async function loadFriends() {
+            if (!currentUser) return;
+            const { data: friendships } = await supabase.from('friends').select('*').or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`).eq('status', 'accepted');
+            const friendIds = friendships?.map(f => f.user_id === currentUser.id ? f.friend_id : f.user_id) || [];
+            
+            if(friendIds.length > 0) {
+                const { data: friends } = await supabase.from('users').select('id, email').in('id', friendIds);
+                document.getElementById('friendsList').innerHTML = friends?.map(f => `<div class="friend-card"><i class="fas fa-user-circle"></i> ${escapeHtml(f.email.split('@')[0])}</div>`).join('') || '<div class="empty-state">No friends yet</div>';
+            } else {
+                document.getElementById('friendsList').innerHTML = '<div class="empty-state"><i class="fas fa-user-plus"></i> No friends yet. Search above!</div>';
+            }
+            
+            const { data: requests } = await supabase.from('friends').select('*').eq('friend_id', currentUser.id).eq('status', 'pending');
+            if(requests && requests.length > 0) {
+                const ids = requests.map(r => r.user_id);
+                const { data: reqUsers } = await supabase.from('users').select('id, email').in('id', ids);
+                document.getElementById('friendRequests').innerHTML = reqUsers?.map(u => `
+                    <div class="friend-card">
+                        <i class="fas fa-user-plus"></i> ${escapeHtml(u.email.split('@')[0])}
+                        <div class="friend-actions">
+                            <button class="accept-btn" onclick="window.acceptFriend('${u.id}')">Accept</button>
+                            <button class="reject-btn" onclick="window.rejectFriend('${u.id}')">Reject</button>
+                        </div>
+                    </div>`).join('');
+            } else {
+                document.getElementById('friendRequests').innerHTML = '<div class="empty-state">No pending requests</div>';
+            }
+        }
+        
+        window.acceptFriend = async (requesterId) => {
+            await supabase.from('friends').update({ status: 'accepted' }).eq('user_id', requesterId).eq('friend_id', currentUser.id);
+            await loadFriends(); await loadChatFriends(); await loadProfile();
+            showMessage(loginMessage, 'Friend accepted!', 'success');
+        };
+        
+        window.rejectFriend = async (requesterId) => {
+            await supabase.from('friends').delete().eq('user_id', requesterId).eq('friend_id', currentUser.id);
+            await loadFriends();
+            showMessage(loginMessage, 'Request rejected', 'success');
+        };
+        
+        window.sendFriendRequest = async (friendId) => {
+            await supabase.from('friends').insert({ user_id: currentUser.id, friend_id: friendId, status: 'pending' });
+            showMessage(loginMessage, 'Friend request sent!', 'success');
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('searchUsers').value = '';
+        };
+        
+        let searchTimeout;
+        document.getElementById('searchUsers')?.addEventListener('input', async (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(async () => {
+                const term = e.target.value.trim();
+                if(term.length < 2) { document.getElementById('searchResults').innerHTML = ''; return; }
+                const { data: users } = await supabase.from('users').select('id, email').ilike('email', `%${term}%`).neq('id', currentUser.id).limit(5);
+                if(users && users.length > 0) {
+                    document.getElementById('searchResults').innerHTML = users.map(u => `
+                        <div class="friend-card">
+                            <i class="fas fa-user"></i> ${escapeHtml(u.email.split('@')[0])}
+                            <div class="friend-actions">
+                                <button class="add-friend-btn" onclick="window.sendFriendRequest('${u.id}')">Add Friend</button>
+                            </div>
+                        </div>`).join('');
+                } else {
+                    document.getElementById('searchResults').innerHTML = '<div class="empty-state">No users found</div>';
+                }
+            }, 500);
+        });
+        
+        async function loadChatFriends() {
+            if (!currentUser) return;
+            const { data: friendships } = await supabase.from('friends').select('*').or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`).eq('status', 'accepted');
+            const friendIds = friendships?.map(f => f.user_id === currentUser.id ? f.friend_id : f.user_id) || [];
+            
+            if(friendIds.length === 0) {
+                document.getElementById('chatFriendsList').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i> Add friends first to start chatting!</div>';
+                return;
+            }
+            
+            const { data: friends } = await supabase.from('users').select('id, email').in('id', friendIds);
+            document.getElementById('chatFriendsList').innerHTML = '<h3><i class="fas fa-comments"></i> Select a friend to chat:</h3>' + friends?.map(f => `
+                <div class="friend-card chat-friend-item" onclick="window.selectChatFriend('${f.id}', '${escapeHtml(f.email.split('@')[0])}')">
+                    <i class="fas fa-user-circle"></i> ${escapeHtml(f.email.split('@')[0])}
+                </div>`).join('');
+        }
+        
+        window.selectChatFriend = async (friendId, friendName) => {
+            selectedChatFriend = { id: friendId, name: friendName };
+            document.getElementById('chatInput').disabled = false;
+            document.getElementById('sendChatBtn').disabled = false;
+            document.getElementById('chatInput').placeholder = `Message @${friendName}...`;
+            
+            const { data: messages } = await supabase.from('private_messages').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`).order('created_at');
+            
+            if(!messages || messages.length === 0) {
+                document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><i class="fas fa-comment-dots"></i> No messages yet. Say hi!</div>';
                 return;
             }
             
             let html = '';
-            for (const post of posts) {
-                html += `
-                    <div class="post-card">
-                        <div class="post-user">👤 ${escapeHtml(post.user_name)}</div>
-                        <video controls autoplay muted loop src="${post.video_url}"></video>
-                        <div style="margin-top: 10px;"><strong>${escapeHtml(post.user_name)}</strong>: ${escapeHtml(post.text || '')} ❤️ ${post.likes || 0}</div>
-                    </div>
-                `;
+            for(const msg of messages) {
+                const isMe = msg.sender_id === currentUser.id;
+                html += `<div class="message-bubble" style="text-align: ${isMe ? 'right' : 'left'}; background: ${isMe ? '#FF2E6380' : '#1E1C3A'};">
+                            <strong>${isMe ? 'Me' : escapeHtml(friendName)}</strong>: ${escapeHtml(msg.text)}
+                        </div>`;
             }
-            videoDiv.innerHTML = html;
+            document.getElementById('chatMessages').innerHTML = html;
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        };
+        
+        async function sendPrivateMessage() {
+            if (!selectedChatFriend) { alert('Select a friend to chat with first!'); return; }
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if(!text) return;
+            await supabase.from('private_messages').insert({ sender_id: currentUser.id, receiver_id: selectedChatFriend.id, text: text });
+            input.value = '';
+            window.selectChatFriend(selectedChatFriend.id, selectedChatFriend.name);
         }
         
-        // Realtime subscriptions
+        document.getElementById('sendChatBtn').onclick = sendPrivateMessage;
+        document.getElementById('chatInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendPrivateMessage(); });
+        
+        document.getElementById('createPostBtn').onclick = async () => {
+            if(!currentUser) { alert('Please sign in first!'); return; }
+            const text = document.getElementById('postText').value;
+            const imageFile = document.getElementById('postImage').files[0];
+            const videoFile = document.getElementById('postVideo').files[0];
+            if(!text && !imageFile && !videoFile) { alert('Please enter text or select media!'); return; }
+            
+            const { data: profile } = await supabase.from('user_profiles').select('first_name, last_name').eq('id', currentUser.id).single();
+            const userName = (profile?.first_name && profile?.last_name) ? `${profile.first_name} ${profile.last_name}` : currentUser.email.split('@')[0];
+            
+            let imageUrl = null, videoUrl = null;
+            if(imageFile) {
+                const fileName = `image_${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                await supabase.storage.from('framor-videos').upload(fileName, imageFile);
+                imageUrl = supabase.storage.from('framor-videos').getPublicUrl(fileName).data.publicUrl;
+            }
+            if(videoFile) {
+                const fileName = `video_${Date.now()}_${videoFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                await supabase.storage.from('framor-videos').upload(fileName, videoFile);
+                videoUrl = supabase.storage.from('framor-videos').getPublicUrl(fileName).data.publicUrl;
+            }
+            
+            await supabase.from('posts').insert({ user_id: currentUser.id, user_name: userName, text: text || '', image_url: imageUrl, video_url: videoUrl, likes: 0 });
+            document.getElementById('postText').value = '';
+            document.getElementById('postImage').value = '';
+            document.getElementById('postVideo').value = '';
+            await loadFeed();
+            await loadVideos();
+            await loadProfile();
+            showMessage(loginMessage, 'Post created!', 'success');
+        };
+        
         function subscribeToRealtime() {
-            if (realtimeChannels.length > 0) return;
-            
-            const postsChannel = supabase
-                .channel('posts-channel')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
-                    loadFeed();
-                    loadVideos();
-                    loadProfile();
-                })
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
-                    loadFeed();
-                })
+            if(realtimeChannels.length > 0) return;
+            const channel = supabase.channel('realtime-all')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => { loadFeed(); loadVideos(); })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => loadFeed())
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'private_messages', filter: `receiver_id=eq.${currentUser?.id}` }, () => { if(selectedChatFriend) window.selectChatFriend(selectedChatFriend.id, selectedChatFriend.name); })
                 .subscribe();
-            
-            // Subscribe to private messages
-            const privateMessagesChannel = supabase
-                .channel('private-messages-channel')
-                .on('postgres_changes', { 
-                    event: 'INSERT', 
-                    schema: 'public', 
-                    table: 'private_messages',
-                    filter: `receiver_id=eq.${currentUser?.id}`
-                }, () => {
-                    if (selectedChatFriend) {
-                        window.selectChatFriend(selectedChatFriend.id, selectedChatFriend.name);
-                    }
-                })
-                .subscribe();
-            
-            realtimeChannels = [postsChannel, privateMessagesChannel];
+            realtimeChannels = [channel];
         }
         
-        function unsubscribeFromRealtime() {
-            realtimeChannels.forEach(channel => {
-                supabase.removeChannel(channel);
-            });
-            realtimeChannels = [];
-        }
-        
-        // Set app state based on auth
         async function setAppState(session) {
-            if (session && session.user) {
+            if(session && session.user) {
                 currentUser = session.user;
                 loginScreen.style.display = 'none';
                 mainApp.style.display = 'flex';
-                loginMessage.innerHTML = '';
-                
                 await loadFeed();
                 await loadVideos();
                 await loadFriends();
@@ -1233,68 +984,39 @@
                 subscribeToRealtime();
             } else {
                 currentUser = null;
-                selectedChatFriend = null;
                 loginScreen.style.display = 'flex';
                 mainApp.style.display = 'none';
-                unsubscribeFromRealtime();
+                realtimeChannels.forEach(c => supabase.removeChannel(c));
+                realtimeChannels = [];
             }
         }
         
-        // Initialize auth
-        async function initAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            await setAppState(session);
-            
-            supabase.auth.onAuthStateChange((event, session) => {
-                setAppState(session);
-            });
-        }
+        supabase.auth.getSession().then(({ data: { session } }) => setAppState(session));
+        supabase.auth.onAuthStateChange((_, session) => setAppState(session));
         
-        // Start the app
-        initAuth();
+        document.getElementById('logoutBtn').onclick = async () => { await supabase.auth.signOut(); };
+        document.getElementById('loginBtn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if(!email || !password) { showMessage(loginMessage, 'Enter email and password', 'error'); return; }
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if(error) showMessage(loginMessage, error.message, 'error');
+            else { signupFields.classList.remove('show'); isSignupMode = false; }
+        };
         
-        // UPDATED Sign up button with First Name and Last Name as username
         document.getElementById('signupBtn').onclick = async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const firstName = document.getElementById('firstName').value;
             const lastName = document.getElementById('lastName').value;
-            const dob = document.getElementById('dob').value;
-            
-            if (!email || !password) {
-                showMessage(loginMessage, 'Please enter email and password', 'error');
-                return;
-            }
-            
-            if (isSignupMode && (!firstName || !lastName)) {
-                showMessage(loginMessage, 'Please enter your First Name and Last Name', 'error');
-                return;
-            }
-            
-            showMessage(loginMessage, 'Creating account...', 'success');
+            if(!email || !password) { showMessage(loginMessage, 'Enter email and password', 'error'); return; }
+            if(isSignupMode && (!firstName || !lastName)) { showMessage(loginMessage, 'Enter first and last name', 'error'); return; }
             
             const { data, error } = await supabase.auth.signUp({ email, password });
-            
-            if (error) {
-                showMessage(loginMessage, error.message, 'error');
-            } else if (data.user) {
-                // Get the full name for display
-                const fullName = `${firstName} ${lastName}`;
-                
-                // Update profile with user's full name as their account name
-                await supabase
-                    .from('user_profiles')
-                    .update({
-                        first_name: firstName,
-                        last_name: lastName,
-                        date_of_birth: dob,
-                        display_name: fullName
-                    })
-                    .eq('id', data.user.id);
-                
+            if(error) { showMessage(loginMessage, error.message, 'error'); }
+            else if(data.user) {
+                await supabase.from('user_profiles').update({ first_name: firstName, last_name: lastName, display_name: `${firstName} ${lastName}` }).eq('id', data.user.id);
                 showMessage(loginMessage, 'Account created! You can now log in.', 'success');
-                
-                // Clear signup fields
                 document.getElementById('firstName').value = '';
                 document.getElementById('lastName').value = '';
                 document.getElementById('dob').value = '';
@@ -1303,171 +1025,22 @@
             }
         };
         
-        // Login button
-        document.getElementById('loginBtn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            if (!email || !password) {
-                showMessage(loginMessage, 'Please enter email and password', 'error');
-                return;
-            }
-            
-            showMessage(loginMessage, 'Logging in...', 'success');
-            
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                showMessage(loginMessage, error.message, 'error');
-            } else {
-                // Clear signup fields on successful login
-                signupFields.classList.remove('show');
-                isSignupMode = false;
-            }
-        };
-        
-        // Google login
         document.getElementById('googleBtn').onclick = async () => {
             const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-            if (error) {
-                showMessage(loginMessage, error.message, 'error');
-            }
+            if(error) showMessage(loginMessage, error.message, 'error');
         };
         
-        // Logout button
-        document.getElementById('logoutBtn').onclick = async () => {
-            await supabase.auth.signOut();
-        };
-        
-        // Navigation
         document.querySelectorAll('.nav-item').forEach(btn => {
             btn.onclick = () => {
-                const panelName = btn.getAttribute('data-panel');
+                const panelName = btn.dataset.panel;
                 document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
                 document.getElementById(`${panelName}Panel`).classList.add('active');
-                
-                if (panelName === 'friends') {
-                    loadFriends();
-                }
-                if (panelName === 'profile') {
-                    loadProfile();
-                }
-                if (panelName === 'chat') {
-                    loadChatFriends();
-                }
+                if(panelName === 'friends') loadFriends();
+                if(panelName === 'profile') loadProfile();
+                if(panelName === 'chat') loadChatFriends();
             };
-        });
-        
-        // Create post - Now posts use the user's full name
-        document.getElementById('createPostBtn').onclick = async () => {
-            if (!currentUser) {
-                alert('Please sign in first!');
-                return;
-            }
-            
-            const text = document.getElementById('postText').value;
-            const imageFile = document.getElementById('postImage').files[0];
-            const videoFile = document.getElementById('postVideo').files[0];
-            
-            if (!text && !imageFile && !videoFile) {
-                alert('Please enter text, select an image, or select a video!');
-                return;
-            }
-            
-            // Get user's full name for post
-            let { data: profile } = await supabase
-                .from('user_profiles')
-                .select('first_name, last_name')
-                .eq('id', currentUser.id)
-                .single();
-            
-            const userName = (profile?.first_name && profile?.last_name) 
-                ? `${profile.first_name} ${profile.last_name}` 
-                : currentUser.email.split('@')[0];
-            
-            const btn = document.getElementById('createPostBtn');
-            btn.innerText = '⏳ Uploading...';
-            btn.disabled = true;
-            
-            let imageUrl = null;
-            let videoUrl = null;
-            
-            // Upload image if selected
-            if (imageFile) {
-                const fileName = `image_${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-                const { error: uploadError } = await supabase.storage
-                    .from('framor-videos')
-                    .upload(fileName, imageFile);
-                
-                if (uploadError) {
-                    alert('Image upload failed: ' + uploadError.message);
-                    btn.innerText = '✨ Post to FRAMOR';
-                    btn.disabled = false;
-                    return;
-                }
-                
-                const { data: urlData } = supabase.storage
-                    .from('framor-videos')
-                    .getPublicUrl(fileName);
-                imageUrl = urlData.publicUrl;
-            }
-            
-            // Upload video if selected
-            if (videoFile) {
-                const fileName = `video_${Date.now()}_${videoFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-                const { error: uploadError } = await supabase.storage
-                    .from('framor-videos')
-                    .upload(fileName, videoFile);
-                
-                if (uploadError) {
-                    alert('Video upload failed: ' + uploadError.message);
-                    btn.innerText = '✨ Post to FRAMOR';
-                    btn.disabled = false;
-                    return;
-                }
-                
-                const { data: urlData } = supabase.storage
-                    .from('framor-videos')
-                    .getPublicUrl(fileName);
-                videoUrl = urlData.publicUrl;
-            }
-            
-            const { error } = await supabase
-                .from('posts')
-                .insert({
-                    user_id: currentUser.id,
-                    user_name: userName,
-                    text: text || '',
-                    image_url: imageUrl,
-                    video_url: videoUrl,
-                    likes: 0
-                });
-            
-            btn.innerText = '✨ Post to FRAMOR';
-            btn.disabled = false;
-            
-            if (error) {
-                alert('Post error: ' + error.message);
-            } else {
-                document.getElementById('postText').value = '';
-                document.getElementById('postImage').value = '';
-                document.getElementById('postVideo').value = '';
-                await loadFeed();
-                await loadVideos();
-                await loadProfile();
-                alert(imageUrl ? '✅ Image posted!' : videoUrl ? '✅ Video posted!' : '✅ Post created!');
-            }
-        };
-        
-        // Send private chat message
-        document.getElementById('sendChatBtn').onclick = sendPrivateMessage;
-        
-        // Allow Enter key to send message
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendPrivateMessage();
-            }
         });
     })();
 </script>
