@@ -147,7 +147,7 @@
             display: block;
         }
 
-        .post-card, .message-bubble {
+        .post-card, .message-bubble, .friend-card {
             background: #1A1A24;
             border-radius: 20px;
             padding: 16px;
@@ -272,6 +272,50 @@
             padding: 40px;
             color: #888;
         }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            background: #1A1A24;
+            border: 1px solid #333;
+            border-radius: 30px;
+            color: white;
+            margin-bottom: 16px;
+        }
+
+        .friend-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .accept-btn, .reject-btn, .add-friend-btn {
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .accept-btn {
+            background: #00FF66;
+            color: black;
+        }
+
+        .reject-btn {
+            background: #FF0066;
+            color: white;
+        }
+
+        .add-friend-btn {
+            background: linear-gradient(135deg, #FF0066, #FF6600);
+            color: white;
+        }
+
+        h3 {
+            margin: 20px 0 10px;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -297,6 +341,7 @@
     <div class="nav-bar">
         <button class="nav-item active" data-panel="feed">📱 Feed</button>
         <button class="nav-item" data-panel="videos">🎵 Reels</button>
+        <button class="nav-item" data-panel="friends">👥 Friends</button>
         <button class="nav-item" data-panel="chat">💬 Chat</button>
     </div>
 
@@ -312,6 +357,15 @@
 
     <div id="videosPanel" class="panel">
         <div id="videoList"></div>
+    </div>
+
+    <div id="friendsPanel" class="panel">
+        <input type="text" id="searchUsers" class="search-box" placeholder="🔍 Search users to add...">
+        <div id="searchResults"></div>
+        <h3>👥 My Friends</h3>
+        <div id="friendsList"></div>
+        <h3>📨 Friend Requests</h3>
+        <div id="friendRequests"></div>
     </div>
 
     <div id="chatPanel" class="panel">
@@ -363,6 +417,150 @@
             });
         }
         
+        // ============ FRIENDS FUNCTIONS ============
+        async function loadFriends() {
+            if (!currentUser) return;
+            
+            // Get accepted friends
+            const { data: friendships } = await supabase
+                .from('friends')
+                .select('*')
+                .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
+                .eq('status', 'accepted');
+            
+            const friendIds = friendships?.map(f => f.user_id === currentUser.id ? f.friend_id : f.user_id) || [];
+            
+            if (friendIds.length > 0) {
+                const { data: friends } = await supabase
+                    .from('users')
+                    .select('id, email')
+                    .in('id', friendIds);
+                
+                document.getElementById('friendsList').innerHTML = friends?.map(f => `
+                    <div class="friend-card">👤 ${escapeHtml(f.email.split('@')[0])}</div>
+                `).join('') || '<div class="loading">No friends yet</div>';
+            } else {
+                document.getElementById('friendsList').innerHTML = '<div class="loading">No friends yet. Search above!</div>';
+            }
+            
+            // Get pending friend requests
+            const { data: requests } = await supabase
+                .from('friends')
+                .select('*')
+                .eq('friend_id', currentUser.id)
+                .eq('status', 'pending');
+            
+            if (requests && requests.length > 0) {
+                const requesterIds = requests.map(r => r.user_id);
+                const { data: requesters } = await supabase
+                    .from('users')
+                    .select('id, email')
+                    .in('id', requesterIds);
+                
+                document.getElementById('friendRequests').innerHTML = requesters?.map(r => `
+                    <div class="friend-card">
+                        👤 ${escapeHtml(r.email.split('@')[0])}
+                        <div class="friend-actions">
+                            <button class="accept-btn" onclick="acceptFriend('${r.id}')">Accept</button>
+                            <button class="reject-btn" onclick="rejectFriend('${r.id}')">Reject</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('friendRequests').innerHTML = '<div class="loading">No pending requests</div>';
+            }
+        }
+        
+        // Accept friend request
+        window.acceptFriend = async (requesterId) => {
+            const { error } = await supabase
+                .from('friends')
+                .update({ status: 'accepted' })
+                .eq('user_id', requesterId)
+                .eq('friend_id', currentUser.id);
+            
+            if (error) {
+                alert('Error accepting friend: ' + error.message);
+            } else {
+                alert('Friend accepted!');
+                await loadFriends();
+            }
+        };
+        
+        // Reject friend request
+        window.rejectFriend = async (requesterId) => {
+            const { error } = await supabase
+                .from('friends')
+                .delete()
+                .eq('user_id', requesterId)
+                .eq('friend_id', currentUser.id);
+            
+            if (error) {
+                alert('Error rejecting friend: ' + error.message);
+            } else {
+                alert('Friend request rejected');
+                await loadFriends();
+            }
+        };
+        
+        // Send friend request
+        window.sendFriendRequest = async (friendId) => {
+            const { error } = await supabase
+                .from('friends')
+                .insert({
+                    user_id: currentUser.id,
+                    friend_id: friendId,
+                    status: 'pending'
+                });
+            
+            if (error) {
+                alert('Error: ' + error.message);
+            } else {
+                alert('Friend request sent!');
+                document.getElementById('searchResults').innerHTML = '';
+                document.getElementById('searchUsers').value = '';
+            }
+        };
+        
+        // Search users
+        let searchTimeout;
+        document.getElementById('searchUsers')?.addEventListener('input', async (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(async () => {
+                const searchTerm = e.target.value.toLowerCase();
+                if (searchTerm.length < 2) {
+                    document.getElementById('searchResults').innerHTML = '';
+                    return;
+                }
+                
+                const { data: users, error } = await supabase
+                    .from('users')
+                    .select('id, email')
+                    .ilike('email', `%${searchTerm}%`)
+                    .neq('id', currentUser.id)
+                    .limit(5);
+                
+                if (error) {
+                    console.error("Search error:", error);
+                    document.getElementById('searchResults').innerHTML = '<div class="loading">Error searching</div>';
+                    return;
+                }
+                
+                if (users && users.length > 0) {
+                    document.getElementById('searchResults').innerHTML = users.map(u => `
+                        <div class="friend-card">
+                            👤 ${escapeHtml(u.email.split('@')[0])}
+                            <div class="friend-actions">
+                                <button class="add-friend-btn" onclick="sendFriendRequest('${u.id}')">Add Friend</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('searchResults').innerHTML = '<div class="loading">No users found</div>';
+                }
+            }, 500);
+        });
+        
         // Load feed posts
         async function loadFeed() {
             const feedDiv = document.getElementById('feedList');
@@ -403,16 +601,9 @@
             document.querySelectorAll('.like-btn').forEach(btn => {
                 btn.onclick = async function() {
                     const id = this.getAttribute('data-id');
-                    const { error } = await supabase
-                        .from('posts')
-                        .update({ likes: supabase.rpc('increment', { row_id: id }) });
-                    
-                    if (error) {
-                        // Fallback if increment function doesn't exist
-                        const post = posts.find(p => String(p.id) === id);
-                        const newLikes = (post?.likes || 0) + 1;
-                        await supabase.from('posts').update({ likes: newLikes }).eq('id', id);
-                    }
+                    const post = posts.find(p => String(p.id) === id);
+                    const newLikes = (post?.likes || 0) + 1;
+                    await supabase.from('posts').update({ likes: newLikes }).eq('id', id);
                     loadFeed();
                 };
             });
@@ -525,6 +716,7 @@
                 await loadFeed();
                 await loadVideos();
                 await loadChat();
+                await loadFriends();
                 subscribeToRealtime();
             } else {
                 currentUser = null;
@@ -602,6 +794,10 @@
                 btn.classList.add('active');
                 document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
                 document.getElementById(`${panelName}Panel`).classList.add('active');
+                
+                if (panelName === 'friends') {
+                    loadFriends();
+                }
             };
         });
         
@@ -717,6 +913,7 @@
                 alert('Message error: ' + error.message);
             } else {
                 input.value = '';
+                await loadChat();
             }
         };
     })();
